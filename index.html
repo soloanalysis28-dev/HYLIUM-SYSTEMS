@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d1720" />
+    <meta name="description" content="Hylium Systems operations dashboard" />
+    <title>Hylium Systems — Home</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+        <div class="brand-row">
+          <a class="brand" href="#home" aria-label="Hylium Systems home">
+            <span class="brand-mark">H</span>
+            <span class="brand-copy"><strong>HYLIUM</strong><small>SYSTEMS</small></span>
+          </a>
+          <button class="icon-button sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Collapse sidebar" aria-expanded="true">
+            <span class="icon icon-menu"></span>
+          </button>
+        </div>
+
+        <div class="nav-label">Workspace</div>
+        <nav class="nav-list">
+          <a class="nav-item active" href="#home" data-page="Home"><span class="icon icon-home"></span><span class="nav-text">Home</span></a>
+          <div class="nav-group">
+            <button class="nav-item nav-button" id="operations-toggle" type="button" aria-expanded="false"><span class="icon icon-operations"></span><span class="nav-text">Operations</span><span class="chevron"></span></button>
+            <div class="subnav" id="operations-menu" hidden>
+              <a href="#receiving">Receiving</a>
+              <a href="#picking">Picking</a>
+              <a href="#dispatch">Dispatch</a>
+              <a href="#tasks">Task queue</a>
+            </div>
+          </div>
+          <a class="nav-item" href="#inventory" data-page="Inventory"><span class="icon icon-inventory"></span><span class="nav-text">Inventory</span></a>
+          <a class="nav-item" href="#dispatch" data-page="Dispatch"><span class="icon icon-truck"></span><span class="nav-text">Dispatch</span></a>
+          <a class="nav-item" href="#stock-control" data-page="Stock Control"><span class="icon icon-boxes"></span><span class="nav-text">Stock Control</span></a>
+          <a class="nav-item" href="#insights" data-page="Insights"><span class="icon icon-insights"></span><span class="nav-text">Insights</span></a>
+          <a class="nav-item" href="#reports" data-page="Reports"><span class="icon icon-report"></span><span class="nav-text">Reports</span></a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <a class="nav-item" href="#settings" data-page="Settings"><span class="icon icon-settings"></span><span class="nav-text">Settings</span></a>
+          <div class="version">Hylium Systems <span>v0.1</span></div>
+        </div>
+      </aside>
+
+      <main class="main-content" id="home">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">Operations overview</div>
+            <h1>Home</h1>
+            <p class="subtitle">A clear view of today’s warehouse operations.</p>
+          </div>
+          <div class="topbar-actions">
+            <label class="search-box" for="global-search">
+              <span class="icon icon-search"></span>
+              <input id="global-search" type="search" placeholder="Search anything" autocomplete="off" />
+              <kbd>⌘ K</kbd>
+            </label>
+            <button class="notification-button" type="button" aria-label="Notifications"><span class="icon icon-bell"></span><i></i></button>
+            <button class="avatar" type="button" aria-label="Open account menu">AM</button>
+          </div>
+        </header>
+
+        <section class="page-heading" aria-labelledby="glance-title">
+          <div><h2 id="glance-title">Today at a glance</h2><p>Tuesday, 14 October 2026</p></div>
+          <button class="date-button" type="button"><span class="icon icon-calendar"></span> This week <span class="chevron"></span></button>
+        </section>
+
+        <section class="kpi-grid" aria-label="Key operational metrics">
+          <article class="kpi-card teal">
+            <div class="card-top"><span class="card-label">Receive</span><span class="card-icon"><span class="icon icon-plus"></span></span></div>
+            <strong class="kpi-value">128</strong><div class="kpi-meta"><span>incoming orders</span><b>+8.4%</b></div>
+          </article>
+          <article class="kpi-card blue">
+            <div class="card-top"><span class="card-label">Dispatch</span><span class="card-icon"><span class="icon icon-arrow"></span></span></div>
+            <strong class="kpi-value">96</strong><div class="kpi-meta"><span>orders shipped</span><b>+5.2%</b></div>
+          </article>
+          <article class="kpi-card amber">
+            <div class="card-top"><span class="card-label">Stocks</span><span class="card-icon"><span class="icon icon-pulse"></span></span></div>
+            <strong class="kpi-value">84%</strong><div class="kpi-meta"><span>capacity in use</span><b>Monitor</b></div>
+          </article>
+          <article class="kpi-card purple">
+            <div class="card-top"><span class="card-label">Reports</span><span class="card-icon"><span class="icon icon-file"></span></span></div>
+            <strong class="kpi-value">24</strong><div class="kpi-meta"><span>ready to review</span><b>View all</b></div>
+          </article>
+        </section>
+
+        <section class="charts-grid">
+          <article class="panel activity-panel">
+            <div class="panel-header"><div><h2>Operational activity</h2><p>Orders processed across the last 7 days</p></div><button class="select-button" type="button">Last 7 days <span class="chevron"></span></button></div>
+            <div class="chart-wrap" aria-label="Operational activity line chart">
+              <div class="y-axis"><span>160</span><span>120</span><span>80</span><span>40</span></div>
+              <div class="line-chart"><div class="grid-lines"><i></i><i></i><i></i><i></i></div><svg viewBox="0 0 640 190" role="img" aria-label="Activity rises steadily through the week"><defs><linearGradient id="lineGradient" x1="0" x2="1"><stop offset="0" stop-color="#53d0bc"/><stop offset="1" stop-color="#5b9bff"/></linearGradient><linearGradient id="areaGradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#53d0bc" stop-opacity=".2"/><stop offset="1" stop-color="#53d0bc" stop-opacity="0"/></linearGradient></defs><path class="area" d="M0 150 C40 136 70 98 104 112 S165 74 206 92 S264 54 305 70 S365 29 406 50 S468 16 505 34 S570 -2 640 17 L640 190 L0 190Z"/><path class="line" d="M0 150 C40 136 70 98 104 112 S165 74 206 92 S264 54 305 70 S365 29 406 50 S468 16 505 34 S570 -2 640 17"/><circle class="line-dot" cx="640" cy="17" r="6"/></svg><div class="x-axis"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div></div>
+            </div>
+          </article>
+          <article class="panel distribution-panel">
+            <div class="panel-header"><div><h2>Order distribution</h2><p>Current workflow status</p></div></div>
+            <div class="donut-wrap"><div class="donut"><div><strong>68%</strong><span>on track</span></div></div></div>
+            <div class="legend"><div><span><i class="dot teal-dot"></i>Completed</span><b>68%</b></div><div><span><i class="dot blue-dot"></i>Processing</span><b>21%</b></div><div><span><i class="dot amber-dot"></i>Needs attention</span><b>11%</b></div></div>
+          </article>
+        </section>
+
+        <section class="recent-section"><div class="section-heading"><h2>Recent activity</h2><a href="#tasks">View queue <span>→</span></a></div><article class="activity-row"><span class="activity-symbol"><span class="icon icon-plus"></span></span><div class="activity-copy"><strong>Inbound shipment received</strong><span>PO-10428 · Dock 03 · 12 minutes ago</span></div><div class="activity-owner"><small>Owner</small><strong>A. Mensah</strong></div><span class="status-pill">Complete</span></article></section>
+        <div class="no-results" id="no-results" hidden>No matching dashboard items. Try a different search.</div>
+      </main>
+    </div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

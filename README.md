@@ -1,11 +1,27 @@
-<div align="center">
+# Hylium Systems
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+A clean, dark operations dashboard for warehouse and enterprise resource workflows.
 
-  <h1>Built with AI Studio</h2>
+## Current GUI slice
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+- Landscape-first dark dashboard layout
+- Collapsible left navigation sidebar
+- 8 primary functions: Home, Operations, Inventory, Dispatch, Stock Control, Insights, Reports, Settings
+- Expandable Operations submenu
+- Far-right global search with `⌘ K` / `Ctrl K` focus shortcut
+- Receive, Dispatch, Stocks, and Reports KPI cards
+- Operational activity line chart
+- Order distribution donut chart
+- Recent activity row
+- Responsive mobile navigation and card layout
+- Static route manifest at `/manus-routes.json`
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Run locally
 
-</div>
+```bash
+npm start
+```
+
+Then open <http://localhost:4173>.
+
+The current dashboard uses static demo data so the GUI can be reviewed before backend workflows and live data are connected.

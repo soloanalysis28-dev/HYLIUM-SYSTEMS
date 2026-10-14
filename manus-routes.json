@@ -1,0 +1,1 @@
+{"routes":[{"path":"/","title":"Home"},{"path":"/inventory","title":"Inventory"},{"path":"/dispatch","title":"Dispatch"},{"path":"/stock-control","title":"Stock Control"},{"path":"/insights","title":"Insights"},{"path":"/reports","title":"Reports"},{"path":"/settings","title":"Settings"}]}
