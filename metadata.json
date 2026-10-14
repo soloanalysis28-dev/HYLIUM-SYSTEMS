@@ -1,6 +1,6 @@
 {
-  "name": "DepotMaster - Windows Container Depot & Logistics Workstation",
-  "description": "Industrial Windows-native container depot management workstation built in Rust architecture with real-time yard tracking, ISO 6346 inventory logging, and logistics API gateways.",
+  "name": "Hylium Systems — Depot Operations",
+  "description": "Hylium Systems warehouse and container depot operations workstation with real-time yard tracking, ISO 6346 inventory logging, and logistics API gateways.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

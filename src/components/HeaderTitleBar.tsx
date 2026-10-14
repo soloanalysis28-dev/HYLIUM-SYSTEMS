@@ -59,7 +59,7 @@ export const HeaderTitleBar: React.FC<HeaderTitleBarProps> = ({
             DM
           </div>
           <span className="font-medium text-slate-200 tracking-tight text-xs">
-            DepotMaster
+            Hylium Systems
           </span>
           <span className="text-slate-600 hidden sm:inline">|</span>
           <span className="text-slate-400 hidden sm:inline text-[11px] font-mono">
@@ -102,7 +102,7 @@ export const HeaderTitleBar: React.FC<HeaderTitleBarProps> = ({
             </button>
             <button 
               onClick={() => {}} 
-              title="Close DepotMaster"
+              title="Close Hylium Systems"
               className="w-9 h-6 flex items-center justify-center hover:bg-red-600 text-slate-400 hover:text-white transition-colors"
             >
               <X className="w-3 h-3" />
