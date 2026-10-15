@@ -12,6 +12,180 @@ export type IsoContainerType =
   | '40FR' // Flat Rack 40ft
   | '20TK'; // Tank Container 20ft
 
+export type ContainerTypeCode = 
+  | '40HC' 
+  | '40GP' 
+  | '20S' 
+  | '45HC' 
+  | '20RF' 
+  | '40RF' 
+  | '20OT' 
+  | '40OT' 
+  | '20FR' 
+  | '40FR' 
+  | '20TK';
+
+// Default enabled container types: strictly 40HC, 40GP (GP), and 20S as requested
+export const DEFAULT_ENABLED_CONTAINER_TYPES: ContainerTypeCode[] = ['40HC', '40GP', '20S'];
+
+export interface TypologySpecification {
+  code: ContainerTypeCode;
+  isoMatches: IsoContainerType[];
+  name: string;
+  shortLabel: string;
+  dimensions: string;
+  teuFactor: number;
+  tareWeightKg: number;
+  category: 'Standard Dry' | 'Extended Dry' | 'Cold Chain' | 'Special Equipment';
+  isCoreDefault: boolean;
+  description: string;
+}
+
+export const CONTAINER_TYPOLOGY_SPECS: TypologySpecification[] = [
+  {
+    code: '40HC',
+    isoMatches: ['40HC'],
+    name: "40' High Cube Dry Container",
+    shortLabel: '40HC',
+    dimensions: "40' x 8' x 9'6\" (12.19m x 2.44m x 2.89m)",
+    teuFactor: 2,
+    tareWeightKg: 3850,
+    category: 'Standard Dry',
+    isCoreDefault: true,
+    description: 'High Cube 40-foot dry steel van. 9ft 6in high for high-volume cargo.'
+  },
+  {
+    code: '40GP',
+    isoMatches: ['40GP'],
+    name: "40' General Purpose Dry Container",
+    shortLabel: 'GP (40GP)',
+    dimensions: "40' x 8' x 8'6\" (12.19m x 2.44m x 2.59m)",
+    teuFactor: 2,
+    tareWeightKg: 3700,
+    category: 'Standard Dry',
+    isCoreDefault: true,
+    description: 'Standard 40-foot general purpose dry van. 8ft 6in standard height.'
+  },
+  {
+    code: '20S',
+    isoMatches: ['20ST', '20GP'],
+    name: "20' Standard Dry Container",
+    shortLabel: '20S (20ST/GP)',
+    dimensions: "20' x 8' x 8'6\" (6.06m x 2.44m x 2.59m)",
+    teuFactor: 1,
+    tareWeightKg: 2150,
+    category: 'Standard Dry',
+    isCoreDefault: true,
+    description: 'Standard 20-foot dry container (1 TEU). Core baseline dry equipment.'
+  },
+  {
+    code: '45HC',
+    isoMatches: ['45HC'],
+    name: "45' High Cube Pallet Wide",
+    shortLabel: '45HC',
+    dimensions: "45' x 8' x 9'6\" (13.71m x 2.44m x 2.89m)",
+    teuFactor: 2.25,
+    tareWeightKg: 4600,
+    category: 'Extended Dry',
+    isCoreDefault: false,
+    description: 'Extended length 45-foot High Cube van for Euro/intermodal pallets.'
+  },
+  {
+    code: '20RF',
+    isoMatches: ['20RF'],
+    name: "20' Reefer Refrigerated Container",
+    shortLabel: '20RF',
+    dimensions: "20' x 8' x 8'6\" Cold-Chain Unit",
+    teuFactor: 1,
+    tareWeightKg: 2950,
+    category: 'Cold Chain',
+    isCoreDefault: false,
+    description: '20-foot refrigerated container with integral electric cooling unit.'
+  },
+  {
+    code: '40RF',
+    isoMatches: ['40RF'],
+    name: "40' High Cube Reefer Container",
+    shortLabel: '40RF',
+    dimensions: "40' x 8' x 9'6\" Cold-Chain Unit",
+    teuFactor: 2,
+    tareWeightKg: 4400,
+    category: 'Cold Chain',
+    isCoreDefault: false,
+    description: '40-foot High Cube refrigerated container for temperature-controlled freight.'
+  },
+  {
+    code: '20OT',
+    isoMatches: ['20OT'],
+    name: "20' Open Top Container",
+    shortLabel: '20OT',
+    dimensions: "20' x 8' x 8'6\" Tarpaulin Roof",
+    teuFactor: 1,
+    tareWeightKg: 2350,
+    category: 'Special Equipment',
+    isCoreDefault: false,
+    description: 'Removable top tarpaulin for top-loading heavy or awkward cargo.'
+  },
+  {
+    code: '40OT',
+    isoMatches: ['40OT'],
+    name: "40' Open Top Container",
+    shortLabel: '40OT',
+    dimensions: "40' x 8' x 8'6\" Tarpaulin Roof",
+    teuFactor: 2,
+    tareWeightKg: 3950,
+    category: 'Special Equipment',
+    isCoreDefault: false,
+    description: '40-foot open top with swinging header beam for oversized cargo.'
+  },
+  {
+    code: '20FR',
+    isoMatches: ['20FR'],
+    name: "20' Flat Rack Container",
+    shortLabel: '20FR',
+    dimensions: "20' x 8' Collapsible End Walls",
+    teuFactor: 1,
+    tareWeightKg: 2750,
+    category: 'Special Equipment',
+    isCoreDefault: false,
+    description: 'Flat rack platform for heavy machinery, pipes, and project cargo.'
+  },
+  {
+    code: '40FR',
+    isoMatches: ['40FR'],
+    name: "40' Flat Rack Container",
+    shortLabel: '40FR',
+    dimensions: "40' x 8' Collapsible End Walls",
+    teuFactor: 2,
+    tareWeightKg: 4900,
+    category: 'Special Equipment',
+    isCoreDefault: false,
+    description: '40-foot flat rack with lashing points for heavy over-dimensional cargo.'
+  },
+  {
+    code: '20TK',
+    isoMatches: ['20TK'],
+    name: "20' ISO Tank Container",
+    shortLabel: '20TK',
+    dimensions: "20' x 8' x 8'6\" Stainless Steel Tank",
+    teuFactor: 1,
+    tareWeightKg: 3600,
+    category: 'Special Equipment',
+    isCoreDefault: false,
+    description: 'ISO tank container framed for bulk liquids, food-grade or chemicals.'
+  }
+];
+
+export function isContainerTypeEnabled(isoType: IsoContainerType, enabledTypes: ContainerTypeCode[]): boolean {
+  for (const code of enabledTypes) {
+    const spec = CONTAINER_TYPOLOGY_SPECS.find(s => s.code === code);
+    if (spec && spec.isoMatches.includes(isoType)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export type ShippingLine = 
   | 'Maersk'
   | 'MSC'

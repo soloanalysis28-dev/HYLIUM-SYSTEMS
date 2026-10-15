@@ -26,3 +26,108 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.7);
 }
+
+/* Splash screen balloon float up and text fade in animations */
+@keyframes hyliumBalloonRise {
+  0% {
+    transform: translateY(220px) scale(0.65) rotate(-5deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  65% {
+    transform: translateY(-16px) scale(1.06) rotate(3deg);
+  }
+  82% {
+    transform: translateY(6px) scale(0.97) rotate(-1.5deg);
+  }
+  100% {
+    transform: translateY(0px) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes hyliumBalloonBob {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(2deg);
+  }
+}
+
+@keyframes hyliumStringSway {
+  0%, 100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes hyliumTextFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+    filter: blur(6px);
+    letter-spacing: 0.1em;
+  }
+  60% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0px);
+    letter-spacing: normal;
+  }
+}
+
+@keyframes hyliumSubFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hyliumGlowPulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.1);
+  }
+}
+
+.animate-balloon-rise {
+  animation: hyliumBalloonRise 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-balloon-bob {
+  animation: hyliumBalloonBob 3.2s ease-in-out infinite;
+}
+
+.animate-string-sway {
+  transform-origin: top center;
+  animation: hyliumStringSway 2.8s ease-in-out infinite;
+}
+
+.animate-text-fade-in {
+  animation: hyliumTextFadeIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.8s forwards;
+  opacity: 0;
+}
+
+.animate-sub-fade-in {
+  animation: hyliumSubFadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) 1.2s forwards;
+  opacity: 0;
+}
+
+.animate-glow-pulse {
+  animation: hyliumGlowPulse 3s ease-in-out infinite;
+}

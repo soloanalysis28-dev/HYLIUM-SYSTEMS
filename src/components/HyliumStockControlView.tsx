@@ -2,7 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { 
   ContainerItem, 
   YardZone, 
-  IsoContainerType 
+  IsoContainerType,
+  ContainerTypeCode,
+  DEFAULT_ENABLED_CONTAINER_TYPES,
+  CONTAINER_TYPOLOGY_SPECS
 } from '../types/depot';
 import { 
   Boxes, 
@@ -10,8 +13,6 @@ import {
   Search, 
   Eye, 
   Move, 
-  CheckCircle2, 
-  AlertTriangle, 
   Clock, 
   SlidersHorizontal, 
   ArrowUpRight, 
@@ -28,6 +29,7 @@ interface HyliumStockControlViewProps {
   containers: ContainerItem[];
   zones: YardZone[];
   depotCapacityTeu: number;
+  enabledContainerTypes?: ContainerTypeCode[];
   onSelectContainer: (container: ContainerItem) => void;
   onRequestMove: (container: ContainerItem) => void;
   onNavigateToSettings: () => void;
@@ -38,12 +40,12 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
   containers,
   zones,
   depotCapacityTeu,
+  enabledContainerTypes = DEFAULT_ENABLED_CONTAINER_TYPES,
   onSelectContainer,
   onRequestMove,
   onNavigateToSettings
 }) => {
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('ALL');
-  const [selectedConditionFilter, setSelectedConditionFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedZoneFilter, setSelectedZoneFilter] = useState<string>('ALL');
 
@@ -71,36 +73,40 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
   const count20ST = useMemo(() => yardContainers.filter((c) => c.isoType === '20GP' || c.isoType === '20ST').length, [yardContainers]);
   const count40GP = useMemo(() => yardContainers.filter((c) => c.isoType === '40GP').length, [yardContainers]);
   
-  // Counts of other supported types
+  // Counts of extended types (if enabled in settings)
   const count45HC = useMemo(() => yardContainers.filter((c) => c.isoType === '45HC').length, [yardContainers]);
   const countReefer = useMemo(() => yardContainers.filter((c) => c.isoType === '20RF' || c.isoType === '40RF').length, [yardContainers]);
   const countOpenTop = useMemo(() => yardContainers.filter((c) => c.isoType === '20OT' || c.isoType === '40OT').length, [yardContainers]);
   const countFlatRack = useMemo(() => yardContainers.filter((c) => c.isoType === '20FR' || c.isoType === '40FR').length, [yardContainers]);
   const countTank = useMemo(() => yardContainers.filter((c) => c.isoType === '20TK').length, [yardContainers]);
 
-  // Condition counts
-  const soundCount = useMemo(() => yardContainers.filter((c) => c.lastInspection?.condition === 'Sound / CSC Valid').length, [yardContainers]);
-  const dentCount = useMemo(() => yardContainers.filter((c) => c.lastInspection?.condition !== 'Sound / CSC Valid').length, [yardContainers]);
-
   // Dwell Aging
   const freshCount = useMemo(() => yardContainers.filter((c) => c.dwellDays <= 7).length, [yardContainers]);
   const mediumCount = useMemo(() => yardContainers.filter((c) => c.dwellDays > 7 && c.dwellDays <= 30).length, [yardContainers]);
   const longCount = useMemo(() => yardContainers.filter((c) => c.dwellDays > 30).length, [yardContainers]);
 
+  // Check if any extended types are active in settings
+  const hasExtendedTypesEnabled = useMemo(() => {
+    return enabledContainerTypes.some((t) => !DEFAULT_ENABLED_CONTAINER_TYPES.includes(t));
+  }, [enabledContainerTypes]);
+
   // Filtered containers
   const filtered = useMemo(() => {
     return yardContainers.filter((c) => {
       // Type Filter
-      if (selectedTypeFilter === '40HC' && c.isoType !== '40HC') return false;
-      if (selectedTypeFilter === '20ST' && c.isoType !== '20GP' && c.isoType !== '20ST') return false;
-      if (selectedTypeFilter === '40GP' && c.isoType !== '40GP') return false;
-      if (selectedTypeFilter === '45HC' && c.isoType !== '45HC') return false;
-      if (selectedTypeFilter === 'REEFER' && c.isoType !== '20RF' && c.isoType !== '40RF') return false;
-      if (selectedTypeFilter === 'SPECIAL' && !['20OT', '40OT', '20FR', '40FR', '20TK'].includes(c.isoType)) return false;
-
-      // Condition Filter
-      if (selectedConditionFilter === 'SOUND' && c.lastInspection?.condition !== 'Sound / CSC Valid') return false;
-      if (selectedConditionFilter === 'DENT' && c.lastInspection?.condition === 'Sound / CSC Valid') return false;
+      if (selectedTypeFilter !== 'ALL') {
+        if (selectedTypeFilter === '40HC' && c.isoType !== '40HC') return false;
+        if ((selectedTypeFilter === '20S' || selectedTypeFilter === '20ST') && c.isoType !== '20GP' && c.isoType !== '20ST') return false;
+        if (selectedTypeFilter === '40GP' && c.isoType !== '40GP') return false;
+        if (selectedTypeFilter === '45HC' && c.isoType !== '45HC') return false;
+        if (selectedTypeFilter === '20RF' && c.isoType !== '20RF') return false;
+        if (selectedTypeFilter === '40RF' && c.isoType !== '40RF') return false;
+        if (selectedTypeFilter === '20OT' && c.isoType !== '20OT') return false;
+        if (selectedTypeFilter === '40OT' && c.isoType !== '40OT') return false;
+        if (selectedTypeFilter === '20FR' && c.isoType !== '20FR') return false;
+        if (selectedTypeFilter === '40FR' && c.isoType !== '40FR') return false;
+        if (selectedTypeFilter === '20TK' && c.isoType !== '20TK') return false;
+      }
 
       // Zone Filter
       if (selectedZoneFilter !== 'ALL' && c.location.zone !== selectedZoneFilter) return false;
@@ -117,7 +123,7 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
 
       return true;
     });
-  }, [yardContainers, selectedTypeFilter, selectedConditionFilter, selectedZoneFilter, searchQuery]);
+  }, [yardContainers, selectedTypeFilter, selectedZoneFilter, searchQuery]);
 
   // Theme tokens
   const cardBg = isDark ? '#14232E' : '#FFFFFF';
@@ -205,10 +211,10 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
             </div>
           </div>
 
-          {/* Stat 3: CSC Survey & Sound Units */}
+          {/* Stat 3: Core Equipment Fleet Mix */}
           <div className="space-y-1">
             <span className="text-[11px] font-bold font-mono uppercase tracking-wider block" style={{ color: textMuted }}>
-              Survey & Equipment Health
+              Core Fleet Equipment Mix
             </span>
             <div className="flex items-baseline gap-2">
               <span 
@@ -218,14 +224,14 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
                   fontFamily: "'Space Grotesk', sans-serif" 
                 }}
               >
-                {soundCount}
+                {count40HC + count40GP + count20ST}
               </span>
-              <span className="text-xs font-mono font-semibold text-emerald-500">
-                Sound / Valid ({Math.round((soundCount / yardContainers.length) * 100)}%)
+              <span className="text-xs font-mono font-semibold" style={{ color: tealAccent }}>
+                Standard Dry Units
               </span>
             </div>
-            <p className="text-xs" style={{ color: textMuted }}>
-              {dentCount} units under survey or minor dent
+            <p className="text-xs font-mono" style={{ color: textMuted }}>
+              40HC: {count40HC} · GP: {count40GP} · 20S: {count20ST}
             </p>
           </div>
 
@@ -339,60 +345,7 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
             </div>
           </div>
 
-          {/* Card 2: 20ST / 20GP */}
-          <div 
-            onClick={() => setSelectedTypeFilter(selectedTypeFilter === '20ST' ? 'ALL' : '20ST')}
-            className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer shadow-xs hover:-translate-y-0.5 ${
-              selectedTypeFilter === '20ST' ? 'ring-2 ring-[#18B7A0]' : ''
-            }`}
-            style={{ 
-              backgroundColor: cardBg, 
-              borderColor: selectedTypeFilter === '20ST' ? tealAccent : cardBorder 
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span 
-                className="text-xs font-mono font-bold px-2 py-0.5 rounded"
-                style={{
-                  backgroundColor: isDark ? '#162E4B' : '#EDF3FC',
-                  color: isDark ? '#5B9BFF' : '#2D79D8'
-                }}
-              >
-                20ST / 20GP
-              </span>
-              <span className="text-[11px] font-mono font-semibold" style={{ color: textMuted }}>
-                1 TEU · 8'6" Height
-              </span>
-            </div>
-
-            <div className="mt-3">
-              <span 
-                className="text-2xl sm:text-3xl font-extrabold tracking-tight"
-                style={{ 
-                  color: textPrimary,
-                  fontFamily: "'Space Grotesk', sans-serif" 
-                }}
-              >
-                {count20ST}
-              </span>
-              <span className="text-xs ml-1 font-semibold" style={{ color: textMuted }}>
-                Units in Stock ({count20ST} TEU)
-              </span>
-            </div>
-
-            <p className="text-xs font-medium mt-1" style={{ color: textPrimary }}>
-              20' Standard Dry Container
-            </p>
-
-            <div className="mt-3 pt-2.5 border-t flex items-center justify-between text-[11px] font-mono" style={{ borderColor: cardBorder, color: textMuted }}>
-              <span>Tare: 2,150 kg</span>
-              <span style={{ color: selectedTypeFilter === '20ST' ? tealAccent : textMuted }}>
-                {selectedTypeFilter === '20ST' ? '● Active Filter' : 'Click to filter'}
-              </span>
-            </div>
-          </div>
-
-          {/* Card 3: 40GP */}
+          {/* Card 2: GP / 40GP */}
           <div 
             onClick={() => setSelectedTypeFilter(selectedTypeFilter === '40GP' ? 'ALL' : '40GP')}
             className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer shadow-xs hover:-translate-y-0.5 ${
@@ -411,7 +364,7 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
                   color: isDark ? '#F1B84B' : '#E49A24'
                 }}
               >
-                40GP
+                GP (40GP)
               </span>
               <span className="text-[11px] font-mono font-semibold" style={{ color: textMuted }}>
                 2 TEU · 8'6" Height
@@ -434,7 +387,7 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
             </div>
 
             <p className="text-xs font-medium mt-1" style={{ color: textPrimary }}>
-              40' General Purpose Dry Van
+              40' General Purpose Dry Van (GP)
             </p>
 
             <div className="mt-3 pt-2.5 border-t flex items-center justify-between text-[11px] font-mono" style={{ borderColor: cardBorder, color: textMuted }}>
@@ -445,42 +398,142 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
             </div>
           </div>
 
-          {/* Card 4: Extended Typologies (45HC, Reefer, Special) */}
+          {/* Card 3: 20S / 20ST */}
           <div 
-            className="p-4 sm:p-5 rounded-2xl border space-y-2 shadow-xs"
+            onClick={() => setSelectedTypeFilter(selectedTypeFilter === '20S' || selectedTypeFilter === '20ST' ? 'ALL' : '20S')}
+            className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer shadow-xs hover:-translate-y-0.5 ${
+              selectedTypeFilter === '20S' || selectedTypeFilter === '20ST' ? 'ring-2 ring-[#18B7A0]' : ''
+            }`}
             style={{ 
-              backgroundColor: surface2, 
-              borderColor: cardBorder 
+              backgroundColor: cardBg, 
+              borderColor: selectedTypeFilter === '20S' || selectedTypeFilter === '20ST' ? tealAccent : cardBorder 
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-black/10 dark:bg-white/10" style={{ color: textMuted }}>
-                Extended Fleet
+              <span 
+                className="text-xs font-mono font-bold px-2 py-0.5 rounded"
+                style={{
+                  backgroundColor: isDark ? '#162E4B' : '#EDF3FC',
+                  color: isDark ? '#5B9BFF' : '#2D79D8'
+                }}
+              >
+                20S (20ST/GP)
               </span>
-              <span className="text-[10px] font-mono font-semibold text-emerald-500">
-                Ready for Intake
+              <span className="text-[11px] font-mono font-semibold" style={{ color: textMuted }}>
+                1 TEU · 8'6" Height
               </span>
             </div>
 
-            <div className="pt-1 space-y-1.5 text-xs font-mono" style={{ color: textMuted }}>
-              <div className="flex items-center justify-between">
-                <span>45' High Cube (45HC):</span>
-                <span className="font-bold" style={{ color: textPrimary }}>{count45HC} in stock</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Reefer (20RF / 40RF):</span>
-                <span className="font-bold" style={{ color: textPrimary }}>{countReefer} in stock</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Special (OT / FR / TK):</span>
-                <span className="font-bold" style={{ color: textPrimary }}>{countOpenTop + countFlatRack + countTank} in stock</span>
-              </div>
+            <div className="mt-3">
+              <span 
+                className="text-2xl sm:text-3xl font-extrabold tracking-tight"
+                style={{ 
+                  color: textPrimary,
+                  fontFamily: "'Space Grotesk', sans-serif" 
+                }}
+              >
+                {count20ST}
+              </span>
+              <span className="text-xs ml-1 font-semibold" style={{ color: textMuted }}>
+                Units in Stock ({count20ST} TEU)
+              </span>
             </div>
 
-            <div className="pt-2 border-t text-[11px]" style={{ borderColor: cardBorder, color: textMuted2 }}>
-              Options available for incoming vessels & rail
+            <p className="text-xs font-medium mt-1" style={{ color: textPrimary }}>
+              20' Standard Dry Container (20S)
+            </p>
+
+            <div className="mt-3 pt-2.5 border-t flex items-center justify-between text-[11px] font-mono" style={{ borderColor: cardBorder, color: textMuted }}>
+              <span>Tare: 2,150 kg</span>
+              <span style={{ color: selectedTypeFilter === '20S' || selectedTypeFilter === '20ST' ? tealAccent : textMuted }}>
+                {selectedTypeFilter === '20S' || selectedTypeFilter === '20ST' ? '● Active Filter' : 'Click to filter'}
+              </span>
             </div>
           </div>
+
+          {/* Card 4: Extended Typologies (Configurable in Settings) */}
+          {hasExtendedTypesEnabled ? (
+            <div 
+              className="p-4 sm:p-5 rounded-2xl border space-y-2 shadow-xs"
+              style={{ 
+                backgroundColor: surface2, 
+                borderColor: cardBorder 
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-black/10 dark:bg-white/10" style={{ color: textMuted }}>
+                  Extended Fleet
+                </span>
+                <span className="text-[10px] font-mono font-semibold text-emerald-500">
+                  Active in Settings
+                </span>
+              </div>
+
+              <div className="pt-1 space-y-1.5 text-xs font-mono" style={{ color: textMuted }}>
+                {enabledContainerTypes.includes('45HC') && (
+                  <div className="flex items-center justify-between">
+                    <span>45' High Cube (45HC):</span>
+                    <strong style={{ color: textPrimary }}>{count45HC} in stock</strong>
+                  </div>
+                )}
+                {(enabledContainerTypes.includes('20RF') || enabledContainerTypes.includes('40RF')) && (
+                  <div className="flex items-center justify-between">
+                    <span>Reefer (RF):</span>
+                    <strong style={{ color: textPrimary }}>{countReefer} in stock</strong>
+                  </div>
+                )}
+                {(enabledContainerTypes.includes('20OT') || enabledContainerTypes.includes('40OT') || enabledContainerTypes.includes('20FR') || enabledContainerTypes.includes('40FR') || enabledContainerTypes.includes('20TK')) && (
+                  <div className="flex items-center justify-between">
+                    <span>Special (OT/FR/TK):</span>
+                    <strong style={{ color: textPrimary }}>{countOpenTop + countFlatRack + countTank} in stock</strong>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2 border-t flex items-center justify-between text-[11px]" style={{ borderColor: cardBorder }}>
+                <span style={{ color: textMuted2 }}>Additional types active</span>
+                <button
+                  type="button"
+                  onClick={onNavigateToSettings}
+                  className="font-semibold text-teal-500 hover:underline cursor-pointer"
+                >
+                  Settings
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div 
+              onClick={onNavigateToSettings}
+              className="p-4 sm:p-5 rounded-2xl border space-y-2.5 shadow-xs transition-all cursor-pointer hover:border-teal-500/50"
+              style={{ 
+                backgroundColor: surface2, 
+                borderColor: cardBorder 
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-black/10 dark:bg-white/10" style={{ color: textMuted }}>
+                  Extended Fleet
+                </span>
+                <span className="text-[10px] font-mono font-semibold" style={{ color: textMuted }}>
+                  Inactive (Default)
+                </span>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-bold" style={{ color: textPrimary }}>
+                  Streamlined to 40HC, GP & 20S
+                </h4>
+                <p className="text-[11px] mt-0.5" style={{ color: textMuted }}>
+                  45HC, Reefer, Open Top, Flat Rack, and Tank typologies are inactive by default. Toggle them in Settings when needed.
+                </p>
+              </div>
+
+              <div className="pt-2 border-t flex items-center justify-between text-[11px] font-semibold" style={{ borderColor: cardBorder, color: tealAccent }}>
+                <span>Toggle in Settings</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -534,11 +587,15 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
         {/* Filter Pills Row */}
         <div className="flex flex-wrap items-center gap-2 pt-1 border-t" style={{ borderColor: cardBorder }}>
           <span className="text-[11px] font-mono mr-1" style={{ color: textMuted }}>Type:</span>
+          {/* Dynamic Typology Filter Pills */}
           {[
             { id: 'ALL', label: `All Types (${yardContainers.length})` },
-            { id: '40HC', label: `40' High Cube (${count40HC})` },
-            { id: '20ST', label: `20' Standard Dry (${count20ST})` },
-            { id: '40GP', label: `40' General Purpose (${count40GP})` }
+            ...(enabledContainerTypes.includes('40HC') ? [{ id: '40HC', label: `40' High Cube (${count40HC})` }] : []),
+            ...(enabledContainerTypes.includes('40GP') ? [{ id: '40GP', label: `GP / 40GP (${count40GP})` }] : []),
+            ...(enabledContainerTypes.includes('20S') ? [{ id: '20S', label: `20S Dry (${count20ST})` }] : []),
+            ...(enabledContainerTypes.includes('45HC') ? [{ id: '45HC', label: `45' HC (${count45HC})` }] : []),
+            ...(enabledContainerTypes.includes('20RF') || enabledContainerTypes.includes('40RF') ? [{ id: 'REEFER', label: `Reefer (${countReefer})` }] : []),
+            ...(enabledContainerTypes.some(t => ['20OT', '40OT', '20FR', '40FR', '20TK'].includes(t)) ? [{ id: 'SPECIAL', label: `Special (${countOpenTop + countFlatRack + countTank})` }] : [])
           ].map((pill) => (
             <button
               key={pill.id}
@@ -555,28 +612,7 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
             </button>
           ))}
 
-          <span className="text-[11px] font-mono ml-3 mr-1" style={{ color: textMuted }}>Condition:</span>
-          {[
-            { id: 'ALL', label: 'All Conditions' },
-            { id: 'SOUND', label: `Sound / CSC Valid (${soundCount})` },
-            { id: 'DENT', label: `Minor Dent (${dentCount})` }
-          ].map((pill) => (
-            <button
-              key={pill.id}
-              type="button"
-              onClick={() => setSelectedConditionFilter(pill.id)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
-                selectedConditionFilter === pill.id
-                  ? isDark ? 'bg-[#123D3B] text-[#53D0BC] border-[#18B7A0]' : 'bg-[#E8F8F5] text-[#128B7B] border-[#DDEDEA]'
-                  : 'border-transparent hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-              style={{ color: selectedConditionFilter === pill.id ? tealAccent : textMuted }}
-            >
-              {pill.label}
-            </button>
-          ))}
-
-          <span className="text-[11px] font-mono ml-3 mr-1" style={{ color: textMuted }}>Zone:</span>
+          <span className="text-[11px] font-mono ml-auto mr-1" style={{ color: textMuted }}>Zone:</span>
           <select
             value={selectedZoneFilter}
             onChange={(e) => setSelectedZoneFilter(e.target.value)}
@@ -594,6 +630,12 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Informative Sub-bar */}
+        <div className="flex items-center justify-between text-[11px] font-mono opacity-70 px-0.5">
+          <span>Click any container row to inspect individual CSC survey condition, inspector notes, and remarks.</span>
+          <span>Showing {filtered.slice(0, 50).length} of {filtered.length} matching units</span>
         </div>
 
         {/* Table Content */}
@@ -615,13 +657,11 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
                 <th className="py-2.5 px-3">Turn-In Date</th>
                 <th className="py-2.5 px-3">Dwell Days</th>
                 <th className="py-2.5 px-3">Tare / Gross Wt</th>
-                <th className="py-2.5 px-3">Survey Condition</th>
                 <th className="py-2.5 px-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y font-mono" style={{ borderColor: cardBorder }}>
               {filtered.slice(0, 50).map((c) => {
-                const isSound = c.lastInspection?.condition === 'Sound / CSC Valid';
                 return (
                   <tr 
                     key={c.id} 
@@ -650,7 +690,7 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
                               : (isDark ? '#F1B84B' : '#E49A24')
                         }}
                       >
-                        {c.isoType}
+                        {c.isoType === '20GP' || c.isoType === '20ST' ? '20S' : c.isoType === '40GP' ? 'GP' : c.isoType}
                       </span>
                       <span className="text-[10px] ml-1.5 opacity-70">
                         {c.isoType === '40HC' ? "40' 9'6\" HC" : c.isoType === '40GP' ? "40' 8'6\" GP" : "20' 8'6\" ST"}
@@ -682,18 +722,6 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
                     {/* Tare / Gross Wt */}
                     <td className="py-2.5 px-3" style={{ color: textMuted }}>
                       {c.tareWeightKg.toLocaleString()} / {(c.grossWeightKg / 1000).toFixed(1)}t
-                    </td>
-
-                    {/* Survey Condition */}
-                    <td className="py-2.5 px-3 font-sans text-xs">
-                      <span 
-                        className={`inline-flex items-center gap-1 font-semibold ${
-                          isSound ? 'text-emerald-500' : 'text-amber-500'
-                        }`}
-                      >
-                        {isSound ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                        <span>{isSound ? 'Sound / CSC Valid' : 'Minor Dent'}</span>
-                      </span>
                     </td>
 
                     {/* Actions */}

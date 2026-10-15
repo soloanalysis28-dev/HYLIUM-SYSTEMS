@@ -13,20 +13,22 @@ import {
   Layers,
   ThermometerSnowflake,
   ShieldAlert,
-  Percent
+  Percent,
+  Sparkles
 } from 'lucide-react';
-import { ContainerItem } from '../types/depot';
+import { ContainerItem, ContainerTypeCode, CONTAINER_TYPOLOGY_SPECS, DEFAULT_ENABLED_CONTAINER_TYPES } from '../types/depot';
 import { RustCodebaseView } from './RustCodebaseView';
-import { ContainerTypeGroup, DEFAULT_ENABLED_CONTAINER_TYPES } from '../config/containerTypes';
 
 interface HyliumSettingsViewProps {
   isDark: boolean;
   depotCapacityTeu: number;
   onUpdateDepotCapacity: (newCapacity: number) => void;
   containers: ContainerItem[];
+  enabledContainerTypes: ContainerTypeCode[];
+  onToggleContainerType: (code: ContainerTypeCode) => void;
+  onResetContainerTypes: (toAll?: boolean) => void;
   onShowToast: (message: string) => void;
-  enabledContainerTypes: ContainerTypeGroup[];
-  onUpdateContainerTypes: (types: ContainerTypeGroup[]) => void;
+  onReplaySplash?: () => void;
 }
 
 export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
@@ -34,11 +36,13 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
   depotCapacityTeu,
   onUpdateDepotCapacity,
   containers,
-  onShowToast,
   enabledContainerTypes,
-  onUpdateContainerTypes
+  onToggleContainerType,
+  onResetContainerTypes,
+  onShowToast,
+  onReplaySplash
 }) => {
-  const [activeTab, setActiveTab] = useState<'capacity' | 'typologies' | 'operations' | 'rust'>('capacity');
+  const [activeTab, setActiveTab] = useState<'capacity' | 'typologies' | 'operations' | 'rust'>('typologies');
   const [capacityInput, setCapacityInput] = useState<number>(depotCapacityTeu);
   const [freeDaysInput, setFreeDaysInput] = useState<number>(5);
   const [demurrageRateInput, setDemurrageRateInput] = useState<number>(115);
@@ -83,167 +87,87 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
     onShowToast('Depot capacity reset to nominal standard of 275 TEU.');
   };
 
-  const containerTypologies = [
-    {
-      group: '40HC' as ContainerTypeGroup,
-      code: '40HC',
-      name: "40' High Cube Dry Container",
-      dimensions: "40' x 8' x 9'6\" (12.19m x 2.44m x 2.89m)",
-      teuFactor: 2,
-      inStock: containers.filter((c) => c.isoType === '40HC' && c.status === 'In Yard').length,
-      status: 'Active Stock',
-      category: 'Dry Van',
-      tareWeightKg: 3850
-    },
-    {
-      group: '20ST' as ContainerTypeGroup,
-      code: '20ST / 20GP',
-      name: "20' Standard Dry Container",
-      dimensions: "20' x 8' x 8'6\" (6.06m x 2.44m x 2.59m)",
-      teuFactor: 1,
-      inStock: containers.filter((c) => (c.isoType === '20GP' || c.isoType === '20ST') && c.status === 'In Yard').length,
-      status: 'Active Stock',
-      category: 'Dry Van',
-      tareWeightKg: 2150
-    },
-    {
-      group: '40GP' as ContainerTypeGroup,
-      code: '40GP',
-      name: "40' Standard General Purpose Dry",
-      dimensions: "40' x 8' x 8'6\" (12.19m x 2.44m x 2.59m)",
-      teuFactor: 2,
-      inStock: containers.filter((c) => c.isoType === '40GP' && c.status === 'In Yard').length,
-      status: 'Active Stock',
-      category: 'Dry Van',
-      tareWeightKg: 3700
-    },
-    {
-      group: '45HC' as ContainerTypeGroup,
-      code: '45HC',
-      name: "45' High Cube Pallet Wide Dry",
-      dimensions: "45' x 8' x 9'6\" (13.71m x 2.44m x 2.89m)",
-      teuFactor: 2.25,
-      inStock: 0,
-      status: 'Supported / Ready',
-      category: 'Dry Van',
-      tareWeightKg: 4600
-    },
-    {
-      group: 'REEFER' as ContainerTypeGroup,
-      code: '20RF / 40RF',
-      name: "Reefer (Refrigerated) Container",
-      dimensions: "20' / 40' Cold-Chain Integral Cooling Unit",
-      teuFactor: 2,
-      inStock: 0,
-      status: 'Supported (54 Plugs)',
-      category: 'Cold Chain',
-      tareWeightKg: 4200
-    },
-    {
-      group: 'SPECIAL' as ContainerTypeGroup,
-      code: '20OT / 40OT',
-      name: "Open Top Container (Removable Roof)",
-      dimensions: "20' / 40' Heavy/Top-Load Cargo with Tarpaulin",
-      teuFactor: 2,
-      inStock: 0,
-      status: 'Supported / Ready',
-      category: 'Special Equipment',
-      tareWeightKg: 3950
-    },
-    {
-      group: 'SPECIAL' as ContainerTypeGroup,
-      code: '20FR / 40FR',
-      name: "Flat Rack (Collapsible Ends)",
-      dimensions: "20' / 40' Heavy Machinery & Out-of-Gauge Cargo",
-      teuFactor: 2,
-      inStock: 0,
-      status: 'Supported / Ready',
-      category: 'Special Equipment',
-      tareWeightKg: 4900
-    },
-    {
-      group: 'SPECIAL' as ContainerTypeGroup,
-      code: '20TK',
-      name: "ISO Tank Container",
-      dimensions: "20' Cylindrical Liquid / Bulk Chemical Vessel",
-      teuFactor: 1,
-      inStock: 0,
-      status: 'Supported (HazMat Zone)',
-      category: 'Liquid / Chemical',
-      tareWeightKg: 3600
-    }
-  ];
-
-  const toggleContainerType = (group: ContainerTypeGroup) => {
-    const next = enabledContainerTypes.includes(group)
-      ? enabledContainerTypes.filter((item) => item !== group)
-      : [...enabledContainerTypes, group];
-    onUpdateContainerTypes(next);
-    onShowToast(`${group} container type ${next.includes(group) ? 'enabled' : 'hidden'} in Inventory.`);
-  };
-
   return (
     <div className="space-y-6 select-none">
-      {/* Subnav Tabs */}
-      <div 
-        className="flex items-center gap-1.5 p-1 rounded-2xl border w-fit"
-        style={{ backgroundColor: surface2, borderColor: cardBorder }}
-      >
-        <button
-          type="button"
-          onClick={() => setActiveTab('capacity')}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-          style={{
-            backgroundColor: activeTab === 'capacity' ? (isDark ? '#14232E' : '#FFFFFF') : 'transparent',
-            color: activeTab === 'capacity' ? tealAccent : textMuted,
-            boxShadow: activeTab === 'capacity' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
-          }}
+      {/* Subnav Tabs & Replay Intro Control */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div 
+          className="flex items-center gap-1.5 p-1 rounded-2xl border w-fit"
+          style={{ backgroundColor: surface2, borderColor: cardBorder }}
         >
-          <Warehouse className="w-3.5 h-3.5" />
-          <span>Depot Capacity & Utilisation</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('capacity')}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+            style={{
+              backgroundColor: activeTab === 'capacity' ? (isDark ? '#14232E' : '#FFFFFF') : 'transparent',
+              color: activeTab === 'capacity' ? tealAccent : textMuted,
+              boxShadow: activeTab === 'capacity' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
+            }}
+          >
+            <Warehouse className="w-3.5 h-3.5" />
+            <span>Depot Capacity & Utilisation</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('typologies')}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-          style={{
-            backgroundColor: activeTab === 'typologies' ? (isDark ? '#14232E' : '#FFFFFF') : 'transparent',
-            color: activeTab === 'typologies' ? tealAccent : textMuted,
-            boxShadow: activeTab === 'typologies' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
-          }}
-        >
-          <Boxes className="w-3.5 h-3.5" />
-          <span>Container Typologies</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('typologies')}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+            style={{
+              backgroundColor: activeTab === 'typologies' ? (isDark ? '#14232E' : '#FFFFFF') : 'transparent',
+              color: activeTab === 'typologies' ? tealAccent : textMuted,
+              boxShadow: activeTab === 'typologies' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
+            }}
+          >
+            <Boxes className="w-3.5 h-3.5" />
+            <span>Container Typologies</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('operations')}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-          style={{
-            backgroundColor: activeTab === 'operations' ? (isDark ? '#14232E' : '#FFFFFF') : 'transparent',
-            color: activeTab === 'operations' ? tealAccent : textMuted,
-            boxShadow: activeTab === 'operations' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
-          }}
-        >
-          <Clock className="w-3.5 h-3.5" />
-          <span>Dwell & Demurrage Rules</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('operations')}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+            style={{
+              backgroundColor: activeTab === 'operations' ? (isDark ? '#14232E' : '#FFFFFF') : 'transparent',
+              color: activeTab === 'operations' ? tealAccent : textMuted,
+              boxShadow: activeTab === 'operations' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
+            }}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>Dwell & Demurrage Rules</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('rust')}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-          style={{
-            backgroundColor: activeTab === 'rust' ? (isDark ? '#14232E' : '#FFFFFF') : 'transparent',
-            color: activeTab === 'rust' ? tealAccent : textMuted,
-            boxShadow: activeTab === 'rust' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
-          }}
-        >
-          <Code2 className="w-3.5 h-3.5" />
-          <span>Rust Core Architecture</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('rust')}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+            style={{
+              backgroundColor: activeTab === 'rust' ? (isDark ? '#14232E' : '#FFFFFF') : 'transparent',
+              color: activeTab === 'rust' ? tealAccent : textMuted,
+              boxShadow: activeTab === 'rust' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
+            }}
+          >
+            <Code2 className="w-3.5 h-3.5" />
+            <span>Rust Core Architecture</span>
+          </button>
+        </div>
+
+        {onReplaySplash && (
+          <button
+            type="button"
+            onClick={onReplaySplash}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+            style={{
+              backgroundColor: isDark ? '#123D3B' : '#E8F8F5',
+              color: tealAccent,
+              borderColor: isDark ? '#18B7A0' : '#DDEDEA'
+            }}
+            title="Replay Hylium Systems floating balloon splash screen"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Replay Intro Animation</span>
+          </button>
+        )}
       </div>
 
       {/* Tab 1: Depot Capacity & Utilisation Settings */}
@@ -487,87 +411,267 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
         </div>
       )}
 
-      {/* Tab 2: Container Typologies Configuration */}
+      {/* Tab 2: Container Typologies Configuration & Fleet Revamp */}
       {activeTab === 'typologies' && (
         <div 
-          className="p-6 rounded-2xl shadow-xs border space-y-5"
+          className="p-5 sm:p-6 rounded-2xl shadow-xs border space-y-6"
           style={{ backgroundColor: cardBg, borderColor: cardBorder }}
         >
-          <div>
-            <h2 
-              className="text-lg font-bold tracking-tight"
-              style={{ 
-                color: textPrimary,
-                fontFamily: "'Space Grotesk', sans-serif" 
-              }}
-            >
-              Supported Container Typologies
-            </h2>
-            <p className="text-xs sm:text-[13px] mt-0.5" style={{ color: textMuted }}>
-              Inventory defaults to 40HC, 40GP, and 20s. Enable optional equipment here when your depot is ready to manage it.
-            </p>
-          </div>
+          {/* Header & Controls Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b" style={{ borderColor: cardBorder }}>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h2 
+                  className="text-lg font-bold tracking-tight"
+                  style={{ 
+                    color: textPrimary,
+                    fontFamily: "'Space Grotesk', sans-serif" 
+                  }}
+                >
+                  Depot Container Fleet Typologies
+                </h2>
+                <span 
+                  className="text-xs font-mono px-2.5 py-0.5 rounded-full font-bold border"
+                  style={{
+                    backgroundColor: isDark ? '#123D3B' : '#E8F8F5',
+                    color: tealAccent,
+                    borderColor: isDark ? '#18B7A0' : '#DDEDEA'
+                  }}
+                >
+                  {enabledContainerTypes.length} of {CONTAINER_TYPOLOGY_SPECS.length} Enabled
+                </span>
+              </div>
+              <p className="text-xs mt-1" style={{ color: textMuted }}>
+                By default, the fleet is streamlined to <strong>40HC, GP (40GP), and 20S</strong> dry equipment. Toggle additional extended ISO typologies on/off to adapt depot operations.
+              </p>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {containerTypologies.map((item) => {
-              const isEnabled = enabledContainerTypes.includes(item.group);
-              const isDefault = DEFAULT_ENABLED_CONTAINER_TYPES.includes(item.group);
-              return (
-              <div 
-                key={item.code}
-                className="p-4 rounded-xl border space-y-3 transition-colors"
+            {/* Quick Action Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onResetContainerTypes(false)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors cursor-pointer"
                 style={{
                   backgroundColor: surface2,
-                  borderColor: cardBorder
+                  borderColor: cardBorder,
+                  color: textPrimary
                 }}
+                title="Reset to default fleet: 40HC, GP, and 20S only"
               >
-                <div className="flex items-center justify-between">
-                  <span 
-                    className="text-xs font-mono font-bold px-2 py-0.5 rounded"
+                <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                <span>Reset to Core Defaults (40HC, GP, 20S)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onResetContainerTypes(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors cursor-pointer"
+                style={{
+                  backgroundColor: isDark ? '#123D3B' : '#E8F8F5',
+                  borderColor: isDark ? '#18B7A0' : '#DDEDEA',
+                  color: tealAccent
+                }}
+                title="Enable all extended container typologies"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Enable All Typologies</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Core Typologies Section (40HC, GP, 20S) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold font-mono uppercase tracking-wider" style={{ color: textPrimary }}>
+                  Core Standard Fleet (Default Active)
+                </h3>
+                <p className="text-xs" style={{ color: textMuted }}>
+                  Primary high-velocity dry cargo equipment for standard yard operations.
+                </p>
+              </div>
+              <span className="text-xs font-mono text-emerald-500 font-semibold">
+                Core Defaults
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {CONTAINER_TYPOLOGY_SPECS.filter((s) => s.isCoreDefault).map((item) => {
+                const isEnabled = enabledContainerTypes.includes(item.code);
+                const inStockCount = containers.filter(
+                  (c) => item.isoMatches.includes(c.isoType) && c.status === 'In Yard'
+                ).length;
+
+                return (
+                  <div 
+                    key={item.code}
+                    className="p-4 rounded-xl border space-y-3 transition-all shadow-xs relative"
                     style={{
-                      backgroundColor: item.inStock > 0 ? (isDark ? '#123D3B' : '#E8F8F5') : (isDark ? '#243743' : '#E6EDF0'),
-                      color: item.inStock > 0 ? tealAccent : textMuted
+                      backgroundColor: isEnabled ? (isDark ? '#162834' : '#FFFFFF') : surface2,
+                      borderColor: isEnabled ? tealAccent : cardBorder,
+                      opacity: isEnabled ? 1 : 0.65
                     }}
                   >
-                    {item.code}
-                  </span>
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold cursor-pointer" style={{ color: isEnabled ? tealAccent : textMuted }}>
-                    <input
-                      type="checkbox"
-                      checked={isEnabled}
-                      onChange={() => toggleContainerType(item.group)}
-                      className="accent-teal-500 cursor-pointer"
-                      aria-label={`Enable ${item.code} in inventory`}
-                    />
-                    {isEnabled ? 'Enabled' : 'Hidden'}
-                  </label>
-                </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span 
+                          className="text-xs font-mono font-bold px-2 py-0.5 rounded"
+                          style={{
+                            backgroundColor: isDark ? '#123D3B' : '#E8F8F5',
+                            color: tealAccent
+                          }}
+                        >
+                          {item.shortLabel}
+                        </span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                          Core Default
+                        </span>
+                      </div>
 
-                <div>
-                  <h4 className="font-bold text-xs" style={{ color: textPrimary }}>{item.name}</h4>
-                  <p className="text-[11px] mt-0.5" style={{ color: textMuted }}>{item.dimensions}</p>
-                </div>
+                      {/* Custom Toggle Switch */}
+                      <button
+                        type="button"
+                        onClick={() => onToggleContainerType(item.code)}
+                        className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
+                          isEnabled ? 'bg-[#18B7A0]' : isDark ? 'bg-slate-700' : 'bg-slate-300'
+                        }`}
+                        title={`Click to ${isEnabled ? 'disable' : 'enable'} ${item.name}`}
+                      >
+                        <div
+                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                            isEnabled ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
 
-                <div className="pt-2 border-t text-[11px] font-mono space-y-1" style={{ borderColor: cardBorder, color: textMuted }}>
-                  <div className="flex justify-between">
-                    <span>Category:</span>
-                    <strong style={{ color: textPrimary }}>{item.category}</strong>
+                    <div>
+                      <h4 className="font-bold text-xs" style={{ color: textPrimary }}>{item.name}</h4>
+                      <p className="text-[11px] mt-0.5" style={{ color: textMuted }}>{item.dimensions}</p>
+                    </div>
+
+                    <p className="text-[11px]" style={{ color: textMuted }}>
+                      {item.description}
+                    </p>
+
+                    <div className="pt-2 border-t text-[11px] font-mono space-y-1" style={{ borderColor: cardBorder, color: textMuted }}>
+                      <div className="flex justify-between">
+                        <span>TEU Multiplier:</span>
+                        <strong style={{ color: textPrimary }}>{item.teuFactor} TEU</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Tare Weight:</span>
+                        <strong style={{ color: textPrimary }}>{item.tareWeightKg.toLocaleString()} kg</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Depot In-Stock:</span>
+                        <strong style={{ color: inStockCount > 0 ? tealAccent : textMuted }}>
+                          {inStockCount} Units ({inStockCount * item.teuFactor} TEU)
+                        </strong>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span>TEU Multiplier:</span>
-                    <strong style={{ color: textPrimary }}>{item.teuFactor} TEU</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Current In Yard:</span>
-                    <strong style={{ color: item.inStock > 0 ? tealAccent : textMuted }}>
-                      {item.inStock} Units
-                    </strong>
-                  </div>
-                  {isDefault && <div className="text-[10px] pt-1" style={{ color: textMuted2 }}>Default inventory type</div>}
-                </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Extended Typologies Section (Toggleable) */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold font-mono uppercase tracking-wider" style={{ color: textPrimary }}>
+                  Extended & Specialized Typologies (Toggleable)
+                </h3>
+                <p className="text-xs" style={{ color: textMuted }}>
+                  Reefer cold-chain plugs, open top tarpaulins, flat racks, 45ft high-cubes, and bulk ISO tanks.
+                </p>
               </div>
-              );
-            })}
+              <span className="text-xs font-mono" style={{ color: textMuted }}>
+                {enabledContainerTypes.filter((c) => !DEFAULT_ENABLED_CONTAINER_TYPES.includes(c)).length} Active
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {CONTAINER_TYPOLOGY_SPECS.filter((s) => !s.isCoreDefault).map((item) => {
+                const isEnabled = enabledContainerTypes.includes(item.code);
+                const inStockCount = containers.filter(
+                  (c) => item.isoMatches.includes(c.isoType) && c.status === 'In Yard'
+                ).length;
+
+                return (
+                  <div 
+                    key={item.code}
+                    className="p-4 rounded-xl border space-y-3 transition-all shadow-xs"
+                    style={{
+                      backgroundColor: isEnabled ? (isDark ? '#162834' : '#FFFFFF') : surface2,
+                      borderColor: isEnabled ? tealAccent : cardBorder,
+                      opacity: isEnabled ? 1 : 0.6
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span 
+                          className="text-xs font-mono font-bold px-2 py-0.5 rounded"
+                          style={{
+                            backgroundColor: isEnabled 
+                              ? (isDark ? '#123D3B' : '#E8F8F5') 
+                              : (isDark ? '#243743' : '#E6EDF0'),
+                            color: isEnabled ? tealAccent : textMuted
+                          }}
+                        >
+                          {item.shortLabel}
+                        </span>
+                        <span className="text-[10px] font-mono opacity-80" style={{ color: textMuted2 }}>
+                          {item.category}
+                        </span>
+                      </div>
+
+                      {/* Custom Toggle Switch */}
+                      <button
+                        type="button"
+                        onClick={() => onToggleContainerType(item.code)}
+                        className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
+                          isEnabled ? 'bg-[#18B7A0]' : isDark ? 'bg-slate-700' : 'bg-slate-300'
+                        }`}
+                        title={`Click to toggle ${item.name}`}
+                      >
+                        <div
+                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                            isEnabled ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-xs" style={{ color: textPrimary }}>{item.name}</h4>
+                      <p className="text-[11px] mt-0.5" style={{ color: textMuted }}>{item.dimensions}</p>
+                    </div>
+
+                    <div className="pt-2 border-t text-[11px] font-mono space-y-1" style={{ borderColor: cardBorder, color: textMuted }}>
+                      <div className="flex justify-between">
+                        <span>TEU Multiplier:</span>
+                        <strong style={{ color: textPrimary }}>{item.teuFactor} TEU</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Status:</span>
+                        <strong style={{ color: isEnabled ? '#10B981' : textMuted }}>
+                          {isEnabled ? 'Active in Fleet' : 'Disabled (Hidden)'}
+                        </strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Depot In-Stock:</span>
+                        <strong style={{ color: inStockCount > 0 ? tealAccent : textMuted }}>
+                          {inStockCount} Units
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
