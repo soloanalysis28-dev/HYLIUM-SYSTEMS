@@ -214,9 +214,21 @@ export const ContainerDetailModal: React.FC<ContainerDetailModalProps> = ({
                   <span className="font-mono text-slate-200">{container.maxPayloadKg.toLocaleString()} kg</span>
                 </div>
                 <div className="flex justify-between">
+                  <span>Turn-In Date:</span>
+                  <span className="font-mono text-slate-200">{new Date(container.entryTimestamp).toLocaleDateString('en-GB')}</span>
+                </div>
+                <div className="flex justify-between">
                   <span>Inspection Condition:</span>
                   <span className="text-emerald-400 font-semibold">{container.lastInspection.condition}</span>
                 </div>
+                {container.inspectionRemarks && (
+                  <div className="flex justify-between">
+                    <span>Surveyor Remarks:</span>
+                    <span className="text-amber-400 font-mono text-[11px] text-right max-w-[240px] truncate" title={container.inspectionRemarks}>
+                      {container.inspectionRemarks}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span>Inspector ID:</span>
                   <span className="text-slate-300">{container.lastInspection.inspector}</span>

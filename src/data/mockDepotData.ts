@@ -1,5 +1,6 @@
 import { ContainerItem, YardZone, YardCrane, LogisticsApiProvider, OutboundWebhook } from '../types/depot';
 import { generateValidContainerNumber } from '../utils/iso6346';
+import { ONE_EXTRACTED_CONTAINERS } from './oneStockData';
 
 export const INITIAL_YARD_ZONES: YardZone[] = [
   {
@@ -46,13 +47,16 @@ export const INITIAL_YARD_ZONES: YardZone[] = [
     id: 'E',
     name: 'Zone E - Empty Equipment Storage',
     type: 'Empty Storage',
-    baysCount: 6,
+    baysCount: 8,
     rowsCount: 4,
     maxTier: 5,
     colorTheme: 'slate',
-    totalSlots: 120
+    totalSlots: 160
   }
 ];
+
+export const INITIAL_CONTAINERS: ContainerItem[] = ONE_EXTRACTED_CONTAINERS;
+
 
 export const INITIAL_CRANES: YardCrane[] = [
   {
@@ -175,7 +179,7 @@ function makeContainer(
   };
 }
 
-export const INITIAL_CONTAINERS: ContainerItem[] = [
+export const MULTI_CARRIER_SEED_CONTAINERS: ContainerItem[] = [
   // Zone A - Import Stacks
   makeContainer('MSKU', 719284, '40HC', 'Maersk', 'In Yard', 'A', 1, 1, 1, {
     cargo: 'Consumer Electronics & Solid State Drives',

@@ -1,9 +1,14 @@
 export type IsoContainerType = 
   | '20GP' // General Purpose 20ft (1 TEU)
+  | '20ST' // Standard Dry 20ft (1 TEU)
   | '40GP' // General Purpose 40ft (2 TEU)
   | '40HC' // High Cube 40ft (2 TEU, 9ft 6in)
+  | '45HC' // High Cube 45ft (2.25 TEU)
   | '20RF' // Reefer Refrigerated 20ft
   | '40RF' // Reefer Refrigerated 40ft
+  | '20OT' // Open Top 20ft
+  | '40OT' // Open Top 40ft
+  | '20FR' // Flat Rack 20ft
   | '40FR' // Flat Rack 40ft
   | '20TK'; // Tank Container 20ft
 
@@ -92,6 +97,8 @@ export interface ContainerItem {
     inspector: string;
     condition: 'Sound / CSC Valid' | 'Minor Dent' | 'Floor Scraping' | 'Requires Wash';
   };
+  inspectionRemarks?: string;
+  loadType?: string;
 }
 
 export interface YardZone {
