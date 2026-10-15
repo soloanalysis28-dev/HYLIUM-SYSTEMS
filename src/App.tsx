@@ -25,6 +25,7 @@ import { LogisticsApiGateway } from './components/LogisticsApiGateway';
 import { ContainerDetailModal } from './components/ContainerDetailModal';
 import { QuickMoveModal } from './components/QuickMoveModal';
 import { CommandPaletteModal } from './components/CommandPaletteModal';
+import { ContainerTypeGroup, DEFAULT_ENABLED_CONTAINER_TYPES } from './config/containerTypes';
 
 export default function App() {
   // Theme state: defaults to false (Light mode as in mockup 1) or true (Dark mode as in mockup 2)
@@ -32,6 +33,25 @@ export default function App() {
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [currentTab, setCurrentTab] = useState<HyliumNavId>('home');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [enabledContainerTypes, setEnabledContainerTypes] = useState<ContainerTypeGroup[]>(() => {
+    try {
+      const saved = localStorage.getItem('hylium_enabled_container_types');
+      if (!saved) return DEFAULT_ENABLED_CONTAINER_TYPES;
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : DEFAULT_ENABLED_CONTAINER_TYPES;
+    } catch {
+      return DEFAULT_ENABLED_CONTAINER_TYPES;
+    }
+  });
+
+  const handleUpdateContainerTypes = (types: ContainerTypeGroup[]) => {
+    setEnabledContainerTypes(types);
+    try {
+      localStorage.setItem('hylium_enabled_container_types', JSON.stringify(types));
+    } catch {
+      // Keep the in-memory setting when local storage is unavailable.
+    }
+  };
 
   // Depot Capacity Configured in Settings (TEU)
   const [depotCapacityTeu, setDepotCapacityTeu] = useState<number>(() => {
@@ -292,6 +312,7 @@ export default function App() {
               containers={containers}
               onSelectContainer={setSelectedContainer}
               onRequestMove={setMoveTargetContainer}
+              enabledContainerTypes={enabledContainerTypes}
             />
           )}
 
@@ -335,6 +356,8 @@ export default function App() {
               onUpdateDepotCapacity={handleUpdateDepotCapacity}
               containers={containers}
               onShowToast={showToast}
+              enabledContainerTypes={enabledContainerTypes}
+              onUpdateContainerTypes={handleUpdateContainerTypes}
             />
           )}
         </main>

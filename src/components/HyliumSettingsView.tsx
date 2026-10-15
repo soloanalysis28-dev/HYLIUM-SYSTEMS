@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { ContainerItem } from '../types/depot';
 import { RustCodebaseView } from './RustCodebaseView';
+import { ContainerTypeGroup, DEFAULT_ENABLED_CONTAINER_TYPES } from '../config/containerTypes';
 
 interface HyliumSettingsViewProps {
   isDark: boolean;
@@ -24,6 +25,8 @@ interface HyliumSettingsViewProps {
   onUpdateDepotCapacity: (newCapacity: number) => void;
   containers: ContainerItem[];
   onShowToast: (message: string) => void;
+  enabledContainerTypes: ContainerTypeGroup[];
+  onUpdateContainerTypes: (types: ContainerTypeGroup[]) => void;
 }
 
 export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
@@ -31,7 +34,9 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
   depotCapacityTeu,
   onUpdateDepotCapacity,
   containers,
-  onShowToast
+  onShowToast,
+  enabledContainerTypes,
+  onUpdateContainerTypes
 }) => {
   const [activeTab, setActiveTab] = useState<'capacity' | 'typologies' | 'operations' | 'rust'>('capacity');
   const [capacityInput, setCapacityInput] = useState<number>(depotCapacityTeu);
@@ -80,6 +85,7 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
 
   const containerTypologies = [
     {
+      group: '40HC' as ContainerTypeGroup,
       code: '40HC',
       name: "40' High Cube Dry Container",
       dimensions: "40' x 8' x 9'6\" (12.19m x 2.44m x 2.89m)",
@@ -90,6 +96,7 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
       tareWeightKg: 3850
     },
     {
+      group: '20ST' as ContainerTypeGroup,
       code: '20ST / 20GP',
       name: "20' Standard Dry Container",
       dimensions: "20' x 8' x 8'6\" (6.06m x 2.44m x 2.59m)",
@@ -100,6 +107,7 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
       tareWeightKg: 2150
     },
     {
+      group: '40GP' as ContainerTypeGroup,
       code: '40GP',
       name: "40' Standard General Purpose Dry",
       dimensions: "40' x 8' x 8'6\" (12.19m x 2.44m x 2.59m)",
@@ -110,6 +118,7 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
       tareWeightKg: 3700
     },
     {
+      group: '45HC' as ContainerTypeGroup,
       code: '45HC',
       name: "45' High Cube Pallet Wide Dry",
       dimensions: "45' x 8' x 9'6\" (13.71m x 2.44m x 2.89m)",
@@ -120,6 +129,7 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
       tareWeightKg: 4600
     },
     {
+      group: 'REEFER' as ContainerTypeGroup,
       code: '20RF / 40RF',
       name: "Reefer (Refrigerated) Container",
       dimensions: "20' / 40' Cold-Chain Integral Cooling Unit",
@@ -130,6 +140,7 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
       tareWeightKg: 4200
     },
     {
+      group: 'SPECIAL' as ContainerTypeGroup,
       code: '20OT / 40OT',
       name: "Open Top Container (Removable Roof)",
       dimensions: "20' / 40' Heavy/Top-Load Cargo with Tarpaulin",
@@ -140,6 +151,7 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
       tareWeightKg: 3950
     },
     {
+      group: 'SPECIAL' as ContainerTypeGroup,
       code: '20FR / 40FR',
       name: "Flat Rack (Collapsible Ends)",
       dimensions: "20' / 40' Heavy Machinery & Out-of-Gauge Cargo",
@@ -150,6 +162,7 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
       tareWeightKg: 4900
     },
     {
+      group: 'SPECIAL' as ContainerTypeGroup,
       code: '20TK',
       name: "ISO Tank Container",
       dimensions: "20' Cylindrical Liquid / Bulk Chemical Vessel",
@@ -160,6 +173,14 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
       tareWeightKg: 3600
     }
   ];
+
+  const toggleContainerType = (group: ContainerTypeGroup) => {
+    const next = enabledContainerTypes.includes(group)
+      ? enabledContainerTypes.filter((item) => item !== group)
+      : [...enabledContainerTypes, group];
+    onUpdateContainerTypes(next);
+    onShowToast(`${group} container type ${next.includes(group) ? 'enabled' : 'hidden'} in Inventory.`);
+  };
 
   return (
     <div className="space-y-6 select-none">
@@ -483,12 +504,15 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
               Supported Container Typologies
             </h2>
             <p className="text-xs sm:text-[13px] mt-0.5" style={{ color: textMuted }}>
-              Terminal fleet equipment master. Currently populated with 40HC, 40GP, and 20ST Dry containers, with all standard ISO typologies ready for operational expansion.
+              Inventory defaults to 40HC, 40GP, and 20s. Enable optional equipment here when your depot is ready to manage it.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {containerTypologies.map((item) => (
+            {containerTypologies.map((item) => {
+              const isEnabled = enabledContainerTypes.includes(item.group);
+              const isDefault = DEFAULT_ENABLED_CONTAINER_TYPES.includes(item.group);
+              return (
               <div 
                 key={item.code}
                 className="p-4 rounded-xl border space-y-3 transition-colors"
@@ -507,15 +531,16 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
                   >
                     {item.code}
                   </span>
-                  <span 
-                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold ${
-                      item.inStock > 0 
-                        ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
-                        : 'text-slate-400'
-                    }`}
-                  >
-                    {item.status}
-                  </span>
+                  <label className="flex items-center gap-1.5 text-[10px] font-semibold cursor-pointer" style={{ color: isEnabled ? tealAccent : textMuted }}>
+                    <input
+                      type="checkbox"
+                      checked={isEnabled}
+                      onChange={() => toggleContainerType(item.group)}
+                      className="accent-teal-500 cursor-pointer"
+                      aria-label={`Enable ${item.code} in inventory`}
+                    />
+                    {isEnabled ? 'Enabled' : 'Hidden'}
+                  </label>
                 </div>
 
                 <div>
@@ -538,9 +563,11 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
                       {item.inStock} Units
                     </strong>
                   </div>
+                  {isDefault && <div className="text-[10px] pt-1" style={{ color: textMuted2 }}>Default inventory type</div>}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

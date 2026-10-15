@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ContainerItem } from '../types/depot';
+import { ContainerTypeGroup, CONTAINER_TYPE_OPTIONS, getContainerTypeGroup } from '../config/containerTypes';
 import { Search, FileSpreadsheet, Calendar } from 'lucide-react';
 
 interface InventoryLogsViewProps {
@@ -8,13 +9,15 @@ interface InventoryLogsViewProps {
   onRequestMove: (container: ContainerItem) => void;
   isDark?: boolean;
   externalSearchQuery?: string;
+  enabledContainerTypes: ContainerTypeGroup[];
 }
 
 export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
   containers,
   onSelectContainer,
   isDark = false,
-  externalSearchQuery = ''
+  externalSearchQuery = '',
+  enabledContainerTypes
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [carrierFilter, setCarrierFilter] = useState<string>('ALL');
@@ -29,6 +32,8 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
   // Filtered containers
   const filtered = useMemo(() => {
     return containers.filter((c) => {
+      if (!enabledContainerTypes.includes(getContainerTypeGroup(c.isoType))) return false;
+
       // Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -40,8 +45,7 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
           c.billOfLading.toLowerCase().includes(q) ||
           c.consignee.toLowerCase().includes(q) ||
           c.destinationPort.toLowerCase().includes(q) ||
-          c.entryTimestamp.toLowerCase().includes(q) ||
-          (c.inspectionRemarks && c.inspectionRemarks.toLowerCase().includes(q));
+          c.entryTimestamp.toLowerCase().includes(q);
         if (!matches) return false;
       }
 
@@ -50,15 +54,8 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
         return false;
       }
 
-      // Type Filter
-      if (typeFilter !== 'ALL') {
-        if (typeFilter === '40HC' && c.isoType !== '40HC') return false;
-        if (typeFilter === '20ST' && c.isoType !== '20GP' && c.isoType !== '20ST') return false;
-        if (typeFilter === '40GP' && c.isoType !== '40GP') return false;
-        if (typeFilter === '45HC' && c.isoType !== '45HC') return false;
-        if (typeFilter === 'REEFER' && !c.isoType.includes('RF')) return false;
-        if (typeFilter === 'SPECIAL' && !['20OT', '40OT', '20FR', '40FR', '20TK'].includes(c.isoType)) return false;
-      }
+      // Type filter is limited to the types enabled in Settings.
+      if (typeFilter !== 'ALL' && getContainerTypeGroup(c.isoType) !== typeFilter) return false;
 
       // Status
       if (statusFilter !== 'ALL' && c.status !== statusFilter) {
@@ -67,7 +64,7 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
 
       return true;
     });
-  }, [containers, searchQuery, carrierFilter, typeFilter, statusFilter]);
+  }, [containers, enabledContainerTypes, searchQuery, carrierFilter, typeFilter, statusFilter]);
 
   const cardBg = isDark ? '#13212b' : '#ffffff';
   const cardBorder = isDark ? '#1c2d3a' : '#edf2f0';
@@ -151,13 +148,10 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
               color: textPrimary
             }}
           >
-            <option value="ALL">All Container Types</option>
-            <option value="40HC">40' High Cube Dry (40HC)</option>
-            <option value="20ST">20' Standard Dry (20ST / 20GP)</option>
-            <option value="40GP">40' General Purpose Dry (40GP)</option>
-            <option value="45HC">45' High Cube (45HC)</option>
-            <option value="REEFER">Reefer Containers (20RF / 40RF)</option>
-            <option value="SPECIAL">Special (Open Top / Flat Rack / Tank)</option>
+            <option value="ALL">All enabled container types</option>
+            {CONTAINER_TYPE_OPTIONS.filter((option) => enabledContainerTypes.includes(option.group)).map((option) => (
+              <option key={option.group} value={option.group}>{option.label}</option>
+            ))}
           </select>
 
           {/* Status Filter */}
@@ -203,13 +197,12 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
                 <th className="py-3.5 px-4 whitespace-nowrap">Turn-in Date</th>
                 <th className="py-3.5 px-4 whitespace-nowrap">Dwell</th>
                 <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4 min-w-[220px]">Condition / Remarks</th>
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: cardBorder }}>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center" style={{ color: textMuted }}>
+                  <td colSpan={7} className="py-12 text-center" style={{ color: textMuted }}>
                     <div className="max-w-sm mx-auto space-y-2">
                       <FileSpreadsheet className="w-8 h-8 mx-auto opacity-40" />
                       <p className="font-semibold text-sm">No containers found matching filter criteria</p>
@@ -283,13 +276,6 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
                       <td className="py-3 px-4">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
                           {c.status}
-                        </span>
-                      </td>
-
-                      {/* Inspection Remarks */}
-                      <td className="py-3 px-4 max-w-[220px] truncate" style={{ color: textMuted }} title={c.inspectionRemarks || c.lastInspection.condition}>
-                        <span className="text-[11px] font-mono">
-                          {c.inspectionRemarks || c.lastInspection.condition}
                         </span>
                       </td>
 
