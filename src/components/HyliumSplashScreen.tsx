@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight } from 'lucide-react';
 
 interface HyliumSplashScreenProps {
@@ -39,7 +39,7 @@ export const HyliumSplashScreen: React.FC<HyliumSplashScreenProps> = ({
       clearTimeout(fadeTimer);
       clearTimeout(completeTimer);
     };
-  }, [durationMs, onComplete]);
+  }, [durationMs]);
 
   const handleSkip = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
