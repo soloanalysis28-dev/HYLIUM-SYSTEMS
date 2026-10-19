@@ -1,6 +1,7 @@
 import React from 'react';
 import { ContainerItem } from '../types/depot';
 import { validateIsoContainerNumber } from '../utils/iso6346';
+import { calculateRealTimeDwellDays, calculateDemurrage, getDetailedDwellBreakdown } from '../utils/dwell';
 import { 
   X, 
   MapPin, 
@@ -31,10 +32,13 @@ export const ContainerDetailModal: React.FC<ContainerDetailModalProps> = ({
   if (!container) return null;
 
   const isoValidation = validateIsoContainerNumber(container.id);
-  const isDemurring = container.dwellDays > container.freeDays;
-  const demurrageAmount = isDemurring
-    ? (container.dwellDays - container.freeDays) * container.demurrageRatePerDayUsd
-    : 0;
+  const realTimeDwellDays = calculateRealTimeDwellDays(container.entryTimestamp, container.exitTimestamp);
+  const { isDemurring, overdueDays, demurrageAmountUsd } = calculateDemurrage(
+    realTimeDwellDays,
+    container.freeDays,
+    container.demurrageRatePerDayUsd
+  );
+  const dwellBreakdown = getDetailedDwellBreakdown(container.entryTimestamp, container.exitTimestamp);
 
   const handlePrintEir = () => {
     window.print();
@@ -100,9 +104,15 @@ export const ContainerDetailModal: React.FC<ContainerDetailModalProps> = ({
             </div>
 
             <div className="p-3 bg-slate-950 rounded border border-slate-800">
-              <span className="text-[10px] font-mono text-slate-500 uppercase block">Dwell / Demurrage</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-slate-500 uppercase block">Dwell Days</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="Live clock sync: =$R$1-H155+1" />
+              </div>
               <span className={`text-sm font-mono font-bold ${isDemurring ? 'text-red-400' : 'text-emerald-400'}`}>
-                {container.dwellDays}d {isDemurring ? `($${demurrageAmount})` : '(Free)'}
+                {realTimeDwellDays} {realTimeDwellDays === 1 ? 'day' : 'days'} {isDemurring ? `($${demurrageAmountUsd.toLocaleString()})` : '(Free Time)'}
+              </span>
+              <span className="text-[10px] font-mono text-teal-400/90 block mt-0.5 truncate" title={`Report formula: ${dwellBreakdown.formulaText}`}>
+                =$R$1 - H155 + 1 ({dwellBreakdown.reportDateStr} - {dwellBreakdown.arrivalDateStr} + 1)
               </span>
             </div>
 
@@ -214,8 +224,12 @@ export const ContainerDetailModal: React.FC<ContainerDetailModalProps> = ({
                   <span className="font-mono text-slate-200">{container.maxPayloadKg.toLocaleString()} kg</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Turn-In Date:</span>
+                  <span>Turn-In / Arrival Date (H155):</span>
                   <span className="font-mono text-slate-200">{new Date(container.entryTimestamp).toLocaleDateString('en-GB')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Dwell Days (=$R$1-H155+1):</span>
+                  <span className="font-mono text-emerald-400 font-bold">{realTimeDwellDays} {realTimeDwellDays === 1 ? 'day' : 'days'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Inspection Condition:</span>

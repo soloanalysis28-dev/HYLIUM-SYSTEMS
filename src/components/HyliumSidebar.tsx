@@ -67,7 +67,7 @@ export const HyliumSidebar: React.FC<HyliumSidebarProps> = ({
       hasSubmenu: true,
       subItems: [
         { id: 'operations' as HyliumNavId, label: 'Yard Stacking' },
-        { id: 'dispatch' as HyliumNavId, label: 'Gate Receiving' },
+        { id: 'dispatch' as HyliumNavId, label: 'Receive (Gate In)' },
         { id: 'stock-control' as HyliumNavId, label: 'Stock Buffer' }
       ]
     },
@@ -79,7 +79,7 @@ export const HyliumSidebar: React.FC<HyliumSidebarProps> = ({
     },
     {
       id: 'dispatch' as HyliumNavId,
-      label: 'Dispatch',
+      label: 'Receive',
       icon: Truck,
       hasSubmenu: false
     },

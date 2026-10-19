@@ -11,7 +11,16 @@ import {
   INITIAL_LOGISTICS_PROVIDERS, 
   INITIAL_WEBHOOKS 
 } from './data/mockDepotData';
-import { ContainerItem, ContainerLocation, OutboundWebhook, YardCrane } from './types/depot';
+import { 
+  ContainerItem, 
+  ContainerLocation, 
+  OutboundWebhook, 
+  YardCrane, 
+  ContainerTypeCode, 
+  DEFAULT_ENABLED_CONTAINER_TYPES, 
+  CONTAINER_TYPOLOGY_SPECS 
+} from './types/depot';
+import { calculateRealTimeDwellDays } from './utils/dwell';
 import { HyliumSidebar, HyliumNavId } from './components/HyliumSidebar';
 import { HyliumHeader } from './components/HyliumHeader';
 import { HyliumHomeDashboard } from './components/HyliumHomeDashboard';
@@ -56,8 +65,108 @@ export default function App() {
     }
   };
 
-  // Core Data State - pre-populated with real extracted ONE containers
-  const [containers, setContainers] = useState<ContainerItem[]>(INITIAL_CONTAINERS);
+  // Container Typologies Configured in Settings (Defaults strictly to 40HC, 40GP/GP, and 20S)
+  const [enabledContainerTypes, setEnabledContainerTypes] = useState<ContainerTypeCode[]>(() => {
+    try {
+      const saved = localStorage.getItem('hylium_enabled_container_types');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      return DEFAULT_ENABLED_CONTAINER_TYPES;
+    } catch {
+      return DEFAULT_ENABLED_CONTAINER_TYPES;
+    }
+  });
+
+  const handleToggleContainerType = (code: ContainerTypeCode) => {
+    setEnabledContainerTypes((prev) => {
+      let updated: ContainerTypeCode[];
+      if (prev.includes(code)) {
+        if (prev.length <= 1) {
+          showToast('At least one container typology must remain active.');
+          return prev;
+        }
+        updated = prev.filter((t) => t !== code);
+      } else {
+        updated = [...prev, code];
+      }
+      try {
+        localStorage.setItem('hylium_enabled_container_types', JSON.stringify(updated));
+      } catch {
+        // fallback
+      }
+      return updated;
+    });
+  };
+
+  const handleResetContainerTypes = (toAll: boolean = false) => {
+    const target = toAll ? CONTAINER_TYPOLOGY_SPECS.map((s) => s.code) : DEFAULT_ENABLED_CONTAINER_TYPES;
+    setEnabledContainerTypes(target);
+    try {
+      localStorage.setItem('hylium_enabled_container_types', JSON.stringify(target));
+    } catch {
+      // fallback
+    }
+    showToast(toAll ? 'All 11 ISO container typologies enabled.' : 'Reset to core default fleet (40HC, GP, and 20S).');
+  };
+
+  // Live Real-Time Clock state (drives live dwell computation across the depot)
+  const [currentRealTime, setCurrentRealTime] = useState<Date>(() => new Date());
+
+  // Core Data State - pre-populated with real extracted ONE containers with real-time computed dwell
+  const [containers, setContainers] = useState<ContainerItem[]>(() => {
+    const nowMs = Date.now();
+    return INITIAL_CONTAINERS.map((c) => ({
+      ...c,
+      dwellDays: calculateRealTimeDwellDays(c.entryTimestamp, c.exitTimestamp, nowMs)
+    }));
+  });
+
+  // Real-time synchronization ticker: updates live system clock and recalculates dwell days
+  useEffect(() => {
+    const ticker = setInterval(() => {
+      const now = new Date();
+      setCurrentRealTime(now);
+      const currentTimeMs = now.getTime();
+
+      setContainers((prev) => {
+        let changed = false;
+        const updated = prev.map((c) => {
+          const freshDwell = calculateRealTimeDwellDays(c.entryTimestamp, c.exitTimestamp, currentTimeMs);
+          if (c.dwellDays !== freshDwell) {
+            changed = true;
+            return { ...c, dwellDays: freshDwell };
+          }
+          return c;
+        });
+        return changed ? updated : prev;
+      });
+    }, 10000); // 10s precision ticker
+
+    // Immediate sync on window focus or tab visibility change
+    const handleSync = () => {
+      const now = new Date();
+      setCurrentRealTime(now);
+      const currentTimeMs = now.getTime();
+      setContainers((prev) =>
+        prev.map((c) => {
+          const freshDwell = calculateRealTimeDwellDays(c.entryTimestamp, c.exitTimestamp, currentTimeMs);
+          return c.dwellDays === freshDwell ? c : { ...c, dwellDays: freshDwell };
+        })
+      );
+    };
+
+    window.addEventListener('focus', handleSync);
+    window.addEventListener('visibilitychange', handleSync);
+
+    return () => {
+      clearInterval(ticker);
+      window.removeEventListener('focus', handleSync);
+      window.removeEventListener('visibilitychange', handleSync);
+    };
+  }, []);
+
   const [zones] = useState(INITIAL_YARD_ZONES);
   const [cranes, setCranes] = useState<YardCrane[]>(INITIAL_CRANES);
   const [providers] = useState(INITIAL_LOGISTICS_PROVIDERS);
@@ -117,6 +226,7 @@ export default function App() {
   };
 
   const handleGateOutSuccess = (containerId: string, truckOut: string) => {
+    const exitTimestamp = new Date().toISOString();
     setContainers((prev) =>
       prev.map((c) =>
         c.id === containerId
@@ -124,11 +234,13 @@ export default function App() {
               ...c,
               status: 'Gate Out',
               truckPlateOut: truckOut,
+              exitTimestamp,
+              dwellDays: calculateRealTimeDwellDays(c.entryTimestamp, exitTimestamp),
               events: [
                 ...c.events,
                 {
                   id: `EV-${Date.now()}`,
-                  timestamp: new Date().toISOString(),
+                  timestamp: exitTimestamp,
                   action: 'Gate Out Release',
                   locationText: 'Depot Gate Lane 03 (Outbound)',
                   operator: `Gate Officer (Hauler: ${truckOut})`,
@@ -196,7 +308,7 @@ export default function App() {
       case 'inventory':
         return { title: 'Inventory' };
       case 'dispatch':
-        return { title: 'Dispatch' };
+        return { title: 'Receive & Gate Station' };
       case 'stock-control':
         return { title: 'Stock Control' };
       case 'insights':
@@ -240,6 +352,7 @@ export default function App() {
             isDark={isDark}
             onToggleTheme={() => setIsDark(!isDark)}
             onOpenCommandPalette={() => setIsSearchOpen(true)}
+            currentRealTime={currentRealTime}
           />
 
           {/* Toast Notification */}
@@ -294,6 +407,7 @@ export default function App() {
               isDark={isDark}
               externalSearchQuery={searchQuery}
               containers={containers}
+              enabledContainerTypes={enabledContainerTypes}
               onSelectContainer={setSelectedContainer}
               onRequestMove={setMoveTargetContainer}
             />
@@ -303,8 +417,10 @@ export default function App() {
             <GateStationView
               containers={containers}
               zones={zones}
+              isDark={isDark}
               onGateInSuccess={handleGateInSuccess}
               onGateOutSuccess={handleGateOutSuccess}
+              onNavigateToInventory={() => setCurrentTab('inventory')}
             />
           )}
 
@@ -314,6 +430,7 @@ export default function App() {
               containers={containers}
               zones={zones}
               depotCapacityTeu={depotCapacityTeu}
+              enabledContainerTypes={enabledContainerTypes}
               onSelectContainer={setSelectedContainer}
               onRequestMove={setMoveTargetContainer}
               onNavigateToSettings={() => setCurrentTab('settings')}
@@ -338,6 +455,9 @@ export default function App() {
               depotCapacityTeu={depotCapacityTeu}
               onUpdateDepotCapacity={handleUpdateDepotCapacity}
               containers={containers}
+              enabledContainerTypes={enabledContainerTypes}
+              onToggleContainerType={handleToggleContainerType}
+              onResetContainerTypes={handleResetContainerTypes}
               onShowToast={showToast}
               onReplaySplash={() => setShowSplash(true)}
             />

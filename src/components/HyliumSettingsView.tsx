@@ -24,9 +24,9 @@ interface HyliumSettingsViewProps {
   depotCapacityTeu: number;
   onUpdateDepotCapacity: (newCapacity: number) => void;
   containers: ContainerItem[];
-  enabledContainerTypes: ContainerTypeCode[];
-  onToggleContainerType: (code: ContainerTypeCode) => void;
-  onResetContainerTypes: (toAll?: boolean) => void;
+  enabledContainerTypes?: ContainerTypeCode[];
+  onToggleContainerType?: (code: ContainerTypeCode) => void;
+  onResetContainerTypes?: (toAll?: boolean) => void;
   onShowToast: (message: string) => void;
   onReplaySplash?: () => void;
 }
@@ -36,9 +36,9 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
   depotCapacityTeu,
   onUpdateDepotCapacity,
   containers,
-  enabledContainerTypes,
-  onToggleContainerType,
-  onResetContainerTypes,
+  enabledContainerTypes = DEFAULT_ENABLED_CONTAINER_TYPES,
+  onToggleContainerType = () => {},
+  onResetContainerTypes = () => {},
   onShowToast,
   onReplaySplash
 }) => {

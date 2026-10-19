@@ -5,7 +5,8 @@ import {
   IsoContainerType,
   ContainerTypeCode,
   DEFAULT_ENABLED_CONTAINER_TYPES,
-  CONTAINER_TYPOLOGY_SPECS
+  CONTAINER_TYPOLOGY_SPECS,
+  isContainerTypeEnabled
 } from '../types/depot';
 import { 
   Boxes, 
@@ -93,7 +94,10 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
   // Filtered containers
   const filtered = useMemo(() => {
     return yardContainers.filter((c) => {
-      // Type Filter
+      // 1. Strict typology toggle filter: only show containers enabled in Settings
+      if (!isContainerTypeEnabled(c.isoType, enabledContainerTypes)) return false;
+
+      // 2. Type Filter (if user specifically clicked a filter pill)
       if (selectedTypeFilter !== 'ALL') {
         if (selectedTypeFilter === '40HC' && c.isoType !== '40HC') return false;
         if ((selectedTypeFilter === '20S' || selectedTypeFilter === '20ST') && c.isoType !== '20GP' && c.isoType !== '20ST') return false;
@@ -108,10 +112,10 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
         if (selectedTypeFilter === '20TK' && c.isoType !== '20TK') return false;
       }
 
-      // Zone Filter
+      // 3. Zone Filter
       if (selectedZoneFilter !== 'ALL' && c.location.zone !== selectedZoneFilter) return false;
 
-      // Search Query
+      // 4. Search Query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const matchId = c.id.toLowerCase().includes(q) || c.formattedId.toLowerCase().includes(q);
@@ -123,7 +127,7 @@ export const HyliumStockControlView: React.FC<HyliumStockControlViewProps> = ({
 
       return true;
     });
-  }, [yardContainers, selectedTypeFilter, selectedZoneFilter, searchQuery]);
+  }, [yardContainers, enabledContainerTypes, selectedTypeFilter, selectedZoneFilter, searchQuery]);
 
   // Theme tokens
   const cardBg = isDark ? '#14232E' : '#FFFFFF';

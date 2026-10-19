@@ -9,6 +9,7 @@ interface HyliumHeaderProps {
   isDark: boolean;
   onToggleTheme: () => void;
   onOpenCommandPalette?: () => void;
+  currentRealTime?: Date;
 }
 
 export const HyliumHeader: React.FC<HyliumHeaderProps> = ({
@@ -18,7 +19,8 @@ export const HyliumHeader: React.FC<HyliumHeaderProps> = ({
   onSearchChange,
   isDark,
   onToggleTheme,
-  onOpenCommandPalette
+  onOpenCommandPalette,
+  currentRealTime
 }) => {
   // Theme tokens matching Hylium design
   const textPrimary = isDark ? '#EAF5F5' : '#17324A';
@@ -31,7 +33,7 @@ export const HyliumHeader: React.FC<HyliumHeaderProps> = ({
 
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 select-none pb-1">
-      {/* Clean Single Title Area - No redundant toggle button or text clutter */}
+      {/* Clean Single Title Area */}
       <div className="flex items-center gap-3">
         <h1 
           className="text-xl sm:text-2xl font-bold tracking-tight"
@@ -52,8 +54,30 @@ export const HyliumHeader: React.FC<HyliumHeaderProps> = ({
         )}
       </div>
 
-      {/* Right Controls: Search, Notifications, Theme Toggle, User Avatar */}
+      {/* Right Controls: Real-Time Clock, Search, Notifications, Theme Toggle, User Avatar */}
       <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* Live Real-Time Clock Badge */}
+        {currentRealTime && (
+          <div 
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-mono border shadow-xs"
+            style={{
+              backgroundColor: surfaceBg,
+              borderColor: surfaceBorder,
+              color: textPrimary
+            }}
+            title="Live terminal reference date ($R$1) actively computing container dwell via formula =$R$1-H155+1"
+          >
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[11px] font-bold text-emerald-500 uppercase tracking-wider">LIVE</span>
+            <span className="text-slate-400">·</span>
+            <span className="text-xs">
+              {currentRealTime.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </span>
+            <span className="text-xs font-bold font-mono text-teal-400">
+              {currentRealTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </span>
+          </div>
+        )}
         {/* Global Search Bar */}
         <div className="relative min-w-[200px] sm:min-w-[280px]">
           <Search 

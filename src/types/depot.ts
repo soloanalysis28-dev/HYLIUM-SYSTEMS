@@ -176,14 +176,26 @@ export const CONTAINER_TYPOLOGY_SPECS: TypologySpecification[] = [
   }
 ];
 
-export function isContainerTypeEnabled(isoType: IsoContainerType, enabledTypes: ContainerTypeCode[]): boolean {
-  for (const code of enabledTypes) {
+export function isContainerTypeEnabled(isoType: IsoContainerType, enabledTypes?: ContainerTypeCode[]): boolean {
+  const activeTypes = enabledTypes && Array.isArray(enabledTypes) && enabledTypes.length > 0 
+    ? enabledTypes 
+    : DEFAULT_ENABLED_CONTAINER_TYPES;
+  for (const code of activeTypes) {
     const spec = CONTAINER_TYPOLOGY_SPECS.find(s => s.code === code);
     if (spec && spec.isoMatches.includes(isoType)) {
       return true;
     }
   }
   return false;
+}
+
+export function getContainerTypeCode(isoType: IsoContainerType): ContainerTypeCode {
+  for (const spec of CONTAINER_TYPOLOGY_SPECS) {
+    if (spec.isoMatches.includes(isoType)) {
+      return spec.code;
+    }
+  }
+  return '40HC';
 }
 
 export type ShippingLine = 
@@ -263,6 +275,7 @@ export interface ContainerItem {
   demurrageRatePerDayUsd: number;
   customsStatus: CustomsStatus;
   entryTimestamp: string;
+  exitTimestamp?: string;
   truckPlateIn?: string;
   truckPlateOut?: string;
   events: ContainerEvent[];

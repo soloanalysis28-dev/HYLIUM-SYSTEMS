@@ -1,7 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ContainerItem } from '../types/depot';
-import { ContainerTypeGroup, CONTAINER_TYPE_OPTIONS, getContainerTypeGroup } from '../config/containerTypes';
-import { Search, FileSpreadsheet, Calendar } from 'lucide-react';
+import { 
+  ContainerItem, 
+  ContainerTypeCode, 
+  DEFAULT_ENABLED_CONTAINER_TYPES, 
+  CONTAINER_TYPOLOGY_SPECS, 
+  isContainerTypeEnabled, 
+  getContainerTypeCode 
+} from '../types/depot';
+import { calculateRealTimeDwellDays } from '../utils/dwell';
+import { Search, FileSpreadsheet, Calendar, ArrowUpDown, ArrowDown, ArrowUp } from 'lucide-react';
 
 interface InventoryLogsViewProps {
   containers: ContainerItem[];
@@ -9,7 +16,7 @@ interface InventoryLogsViewProps {
   onRequestMove: (container: ContainerItem) => void;
   isDark?: boolean;
   externalSearchQuery?: string;
-  enabledContainerTypes: ContainerTypeGroup[];
+  enabledContainerTypes?: ContainerTypeCode[];
 }
 
 export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
@@ -17,24 +24,42 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
   onSelectContainer,
   isDark = false,
   externalSearchQuery = '',
-  enabledContainerTypes
+  enabledContainerTypes = DEFAULT_ENABLED_CONTAINER_TYPES
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [carrierFilter, setCarrierFilter] = useState<string>('ALL');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [sortBy, setSortBy] = useState<'arrival' | 'dwell'>('arrival');
+  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
+
   useEffect(() => {
     if (externalSearchQuery) {
       setSearchQuery(externalSearchQuery);
     }
   }, [externalSearchQuery]);
 
+  const activeTypes = useMemo(() => {
+    return enabledContainerTypes && Array.isArray(enabledContainerTypes) && enabledContainerTypes.length > 0
+      ? enabledContainerTypes
+      : DEFAULT_ENABLED_CONTAINER_TYPES;
+  }, [enabledContainerTypes]);
+
+  // Dynamically extract all available shipping lines from containers + major lines
+  const shippingLineOptions = useMemo(() => {
+    const defaultLines = ['ONE', 'Maersk', 'MSC', 'CMA CGM', 'Hapag-Lloyd', 'PIL', 'Evergreen', 'COSCO'];
+    const linesFromStock = containers.map((c) => c.shippingLine).filter(Boolean);
+    const combined = Array.from(new Set([...defaultLines, ...linesFromStock]));
+    return combined;
+  }, [containers]);
+
   // Filtered containers
   const filtered = useMemo(() => {
     return containers.filter((c) => {
-      if (!enabledContainerTypes.includes(getContainerTypeGroup(c.isoType))) return false;
+      // 1. Only show containers matching enabled container types from Settings
+      if (!isContainerTypeEnabled(c.isoType, activeTypes)) return false;
 
-      // Search
+      // 2. Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matches = 
@@ -49,22 +74,40 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
         if (!matches) return false;
       }
 
-      // Carrier
+      // 3. Carrier
       if (carrierFilter !== 'ALL' && c.shippingLine !== carrierFilter) {
         return false;
       }
 
-      // Type filter is limited to the types enabled in Settings.
-      if (typeFilter !== 'ALL' && getContainerTypeGroup(c.isoType) !== typeFilter) return false;
+      // 4. Type filter is limited to the types enabled in Settings.
+      if (typeFilter !== 'ALL') {
+        const cCode = getContainerTypeCode(c.isoType);
+        if (cCode !== typeFilter && c.isoType !== typeFilter) return false;
+      }
 
-      // Status
+      // 5. Status
       if (statusFilter !== 'ALL' && c.status !== statusFilter) {
         return false;
       }
 
       return true;
     });
-  }, [containers, enabledContainerTypes, searchQuery, carrierFilter, typeFilter, statusFilter]);
+  }, [containers, activeTypes, searchQuery, carrierFilter, typeFilter, statusFilter]);
+
+  // Sort containers by Date of Arrival or Real-Time Dwell Days (=$R$1 - H155 + 1)
+  const sortedContainers = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'dwell') {
+        const dwellA = calculateRealTimeDwellDays(a.entryTimestamp, a.exitTimestamp);
+        const dwellB = calculateRealTimeDwellDays(b.entryTimestamp, b.exitTimestamp);
+        return sortDirection === 'desc' ? dwellB - dwellA : dwellA - dwellB;
+      }
+      // Default: Sort stock by Date of Arrival (entryTimestamp)
+      const timeA = new Date(a.entryTimestamp).getTime() || 0;
+      const timeB = new Date(b.entryTimestamp).getTime() || 0;
+      return sortDirection === 'desc' ? timeB - timeA : timeA - timeB;
+    });
+  }, [filtered, sortBy, sortDirection]);
 
   const cardBg = isDark ? '#13212b' : '#ffffff';
   const cardBorder = isDark ? '#1c2d3a' : '#edf2f0';
@@ -74,46 +117,21 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Top Ledger Toolbar */}
+      {/* Search, Shipping Lines, Con Types, Statuses, and Sort in ONE Single Line */}
       <div 
-        className="rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs border transition-colors"
+        className="rounded-xl p-3 sm:p-3.5 shadow-xs border transition-colors"
         style={{ backgroundColor: cardBg, borderColor: cardBorder }}
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base sm:text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: textPrimary }}>
-              <span>Stock Registry</span>
-              <span 
-                className="text-xs font-mono px-2.5 py-0.5 rounded-full font-bold border"
-                style={{
-                  backgroundColor: isDark ? '#143834' : '#e6f7f4',
-                  color: isDark ? '#23cca8' : '#108e7d',
-                  borderColor: isDark ? '#1a544e' : '#bfece2'
-                }}
-              >
-                {filtered.length} of {containers.length} Units
-              </span>
-            </h2>
-            <p className="text-xs mt-1" style={{ color: textMuted }}>
-              Locate and review containers registered in the depot. Dwell and demurrage are managed in Reports.
-            </p>
-          </div>
-        </div>
-
-        {/* Filters and Search Bar */}
-        <div 
-          className="flex flex-wrap items-center gap-2.5 pt-3 border-t text-xs"
-          style={{ borderColor: cardBorder }}
-        >
-          {/* Search Input */}
-          <div className="relative flex-1 min-w-[220px]">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 text-xs">
+          {/* 1. Search */}
+          <div className="relative flex-1 min-w-[180px]">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: textMuted }} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search container, seal, booking, or remark..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl text-xs focus:outline-none border transition-colors"
+              placeholder="Search container, seal, booking..."
+              className="w-full pl-9 pr-3 py-2 rounded-lg text-xs focus:outline-none border transition-colors font-mono"
               style={{
                 backgroundColor: innerBg,
                 borderColor: cardBorder,
@@ -122,54 +140,83 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
             />
           </div>
 
-          {/* Carrier Selector */}
+          {/* 2. Shipping Lines */}
           <select
             value={carrierFilter}
             onChange={(e) => setCarrierFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl text-xs focus:outline-none border font-mono"
+            className="px-3 py-2 rounded-lg text-xs focus:outline-none border font-mono shrink-0 cursor-pointer"
             style={{
               backgroundColor: innerBg,
               borderColor: cardBorder,
               color: textPrimary
             }}
+            title="Filter by Shipping Line"
           >
             <option value="ALL">All Shipping Lines</option>
-            <option value="ONE">ONE (Ocean Network Express)</option>
-          </select>
-
-          {/* Type Selector */}
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl text-xs focus:outline-none border font-mono"
-            style={{
-              backgroundColor: innerBg,
-              borderColor: cardBorder,
-              color: textPrimary
-            }}
-          >
-            <option value="ALL">All enabled container types</option>
-            {CONTAINER_TYPE_OPTIONS.filter((option) => enabledContainerTypes.includes(option.group)).map((option) => (
-              <option key={option.group} value={option.group}>{option.label}</option>
+            {shippingLineOptions.map((line) => (
+              <option key={line} value={line}>{line}</option>
             ))}
           </select>
 
-          {/* Status Filter */}
+          {/* 3. Con Types */}
           <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl text-xs focus:outline-none border font-mono"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg text-xs focus:outline-none border font-mono shrink-0 cursor-pointer"
             style={{
               backgroundColor: innerBg,
               borderColor: cardBorder,
               color: textPrimary
             }}
+            title="Filter by Container Type"
+          >
+            <option value="ALL">All Con Types ({activeTypes.length})</option>
+            {CONTAINER_TYPOLOGY_SPECS.filter((spec) => activeTypes.includes(spec.code)).map((spec) => (
+              <option key={spec.code} value={spec.code}>
+                {spec.shortLabel}
+              </option>
+            ))}
+          </select>
+
+          {/* 4. Statuses */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg text-xs focus:outline-none border font-mono shrink-0 cursor-pointer"
+            style={{
+              backgroundColor: innerBg,
+              borderColor: cardBorder,
+              color: textPrimary
+            }}
+            title="Filter by Container Status"
           >
             <option value="ALL">All Statuses</option>
-            <option value="In Yard">In Yard (Active)</option>
-            <option value="Under Inspection">Under Inspection</option>
+            <option value="In Yard">In Yard</option>
+            <option value="Under Inspection">Inspection</option>
             <option value="Customs Hold">Customs Hold</option>
-            <option value="Gate Out">Dispatched / Gate Out</option>
+            <option value="Gate Out">Gate Out</option>
+          </select>
+
+          {/* 5. Sort */}
+          <select
+            value={`${sortBy}-${sortDirection}`}
+            onChange={(e) => {
+              const [newSortBy, newDir] = e.target.value.split('-') as ['arrival' | 'dwell', 'desc' | 'asc'];
+              setSortBy(newSortBy);
+              setSortDirection(newDir);
+            }}
+            className="px-3 py-2 rounded-lg text-xs focus:outline-none border font-mono font-semibold shrink-0 cursor-pointer"
+            style={{
+              backgroundColor: innerBg,
+              borderColor: isDark ? '#1a544e' : '#bfece2',
+              color: isDark ? '#23cca8' : '#108e7d'
+            }}
+            title="Sort stock by Date of Arrival or Real-Time Dwell Days"
+          >
+            <option value="arrival-desc">Sort: Arrival (Newest ↓)</option>
+            <option value="arrival-asc">Sort: Arrival (Oldest ↑)</option>
+            <option value="dwell-desc">Sort: Dwell (Highest ↓)</option>
+            <option value="dwell-asc">Sort: Dwell (Lowest ↑)</option>
           </select>
         </div>
       </div>
@@ -194,13 +241,60 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
                 <th className="py-3.5 px-4">Carrier</th>
                 <th className="py-3.5 px-4">Type</th>
                 <th className="py-3.5 px-4 whitespace-nowrap">Yard Location</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">Turn-in Date</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">Dwell</th>
+                {/* Arrival Date Column Header - Clickable Sort Header */}
+                <th 
+                  onClick={() => {
+                    if (sortBy === 'arrival') {
+                      setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+                    } else {
+                      setSortBy('arrival');
+                      setSortDirection('desc');
+                    }
+                  }}
+                  className="py-3.5 px-4 whitespace-nowrap cursor-pointer select-none group transition-colors"
+                  title="Click to sort by Date of Arrival (Newest / Oldest)"
+                >
+                  <div className="flex items-center gap-1.5" style={{ color: sortBy === 'arrival' ? (isDark ? '#23cca8' : '#108e7d') : textMuted }}>
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span className={`font-bold ${sortBy === 'arrival' ? 'underline decoration-dotted underline-offset-4' : 'group-hover:text-teal-400'}`}>
+                      Date of Arrival
+                    </span>
+                    {sortBy === 'arrival' ? (
+                      sortDirection === 'desc' ? <ArrowDown className="w-3.5 h-3.5" /> : <ArrowUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 opacity-40 group-hover:opacity-100" />
+                    )}
+                  </div>
+                </th>
+                {/* Dwell Days Column Header - Clickable Sort Header */}
+                <th 
+                  onClick={() => {
+                    if (sortBy === 'dwell') {
+                      setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+                    } else {
+                      setSortBy('dwell');
+                      setSortDirection('desc');
+                    }
+                  }}
+                  className="py-3.5 px-4 whitespace-nowrap cursor-pointer select-none group transition-colors"
+                  title="Click to sort by Real-Time Dwell Days"
+                >
+                  <div className="flex items-center gap-1.5" style={{ color: sortBy === 'dwell' ? (isDark ? '#23cca8' : '#108e7d') : textMuted }}>
+                    <span className={`font-bold ${sortBy === 'dwell' ? 'underline decoration-dotted underline-offset-4' : 'group-hover:text-teal-400'}`}>
+                      Dwell (=$R$1-H155+1)
+                    </span>
+                    {sortBy === 'dwell' ? (
+                      sortDirection === 'desc' ? <ArrowDown className="w-3.5 h-3.5" /> : <ArrowUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 opacity-40 group-hover:opacity-100" />
+                    )}
+                  </div>
+                </th>
                 <th className="py-3.5 px-4">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: cardBorder }}>
-              {filtered.length === 0 ? (
+              {sortedContainers.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center" style={{ color: textMuted }}>
                     <div className="max-w-sm mx-auto space-y-2">
@@ -211,7 +305,7 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                filtered.map((c) => {
+                sortedContainers.map((c) => {
                   return (
                     <tr
                       key={c.id}
@@ -265,11 +359,26 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
                         </div>
                       </td>
 
-                      {/* Dwell Days */}
+                      {/* Dwell Days (=$R$1 - H155 + 1) */}
                       <td className="py-3 px-4 font-mono">
-                        <span className={`font-bold ${c.dwellDays > 300 ? 'text-purple-400' : c.dwellDays > 30 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                          {c.dwellDays} days
-                        </span>
+                        {(() => {
+                          const liveDwell = calculateRealTimeDwellDays(c.entryTimestamp, c.exitTimestamp);
+                          return (
+                            <div className="flex items-center gap-1.5">
+                              <span className={`font-bold ${liveDwell > 300 ? 'text-purple-400' : liveDwell > 30 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                {liveDwell} {liveDwell === 1 ? 'day' : 'days'}
+                              </span>
+                              {liveDwell > 5 && (
+                                <span 
+                                  className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20 font-semibold"
+                                  title={`Demurrage: $${((liveDwell - 5) * 115).toLocaleString()} (${liveDwell - 5} days overdue)`}
+                                >
+                                  +${((liveDwell - 5) * 115).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* Status */}
