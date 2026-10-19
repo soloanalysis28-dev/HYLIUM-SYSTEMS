@@ -253,6 +253,7 @@ export interface ContainerItem {
   serial: string; // 729183
   checkDigit: number; // 4
   formattedId: string; // MSKU 729183-4
+  depotCode?: string; // Multi-depot code, e.g. BAKHRE30 or ALRHRE31
   isoType: IsoContainerType;
   teu: number; // 1 or 2
   shippingLine: ShippingLine;

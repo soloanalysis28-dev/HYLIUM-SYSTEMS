@@ -58,6 +58,11 @@ const SHIPPING_LINE_PRESETS: ShippingLinePreset[] = [
 
 const MONTH_CODES = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
+const DEPOT_OPTIONS = [
+  { code: 'BAKHRE30', label: 'BAKHRE30 — ONE Bakhre Depot' },
+  { code: 'ALRHRE31', label: 'ALRHRE31 — ONE Al Rhenish Depot' }
+] as const;
+
 // Helper to get cumulative receipt number (e.g., OCT0001, OCT0002...)
 function getCumulativeReceiptNumber(): { receiptNumber: string; monthCode: string; count: number } {
   const currentMonthCode = MONTH_CODES[new Date().getMonth()];
@@ -101,6 +106,7 @@ export const GateStationView: React.FC<GateStationViewProps> = ({
 
   // STEP 1 STATE: DETAILS SECTION (Shipping line & Cumulative Receipt Number)
   const [receiptMeta, setReceiptMeta] = useState(() => getCumulativeReceiptNumber());
+  const [depotCode, setDepotCode] = useState<string>('BAKHRE30');
   const [selectedLine, setSelectedLine] = useState<ShippingLine>('ONE');
   const [shippingLineCode, setShippingLineCode] = useState<string>('ONE1224');
   const [bookingRef, setBookingRef] = useState<string>('BK-ONE-84920');
@@ -210,6 +216,7 @@ export const GateStationView: React.FC<GateStationViewProps> = ({
   const [committedContainer, setCommittedContainer] = useState<ContainerItem | null>(null);
   const [committedEirMeta, setCommittedEirMeta] = useState<{
     receiptNumber: string;
+    depotCode: string;
     shippingLineCode: string;
     transportMode: 'TRUCK' | 'TRAIN';
     vehicleId: string;
@@ -270,6 +277,7 @@ export const GateStationView: React.FC<GateStationViewProps> = ({
       serial: inSerial,
       checkDigit: inExpectedCheck,
       formattedId: `${inPrefix} ${inSerial}-${inExpectedCheck}`,
+      depotCode,
       isoType: inType,
       teu: inType.startsWith('40') ? 2 : inType.startsWith('45') ? 2.25 : 1,
       shippingLine: selectedLine,
@@ -317,6 +325,7 @@ export const GateStationView: React.FC<GateStationViewProps> = ({
     setCommittedContainer(newContainer);
     setCommittedEirMeta({
       receiptNumber: currentReceiptNum,
+      depotCode,
       shippingLineCode,
       transportMode,
       vehicleId: transportMode === 'TRUCK' ? truckPlate : trainConsistId,
@@ -370,6 +379,7 @@ export const GateStationView: React.FC<GateStationViewProps> = ({
     const text = `
 === EQUIPMENT INTERCHANGE RECEIPT (EIR) ===
 RECEIPT NO: ${committedEirMeta.receiptNumber}
+DEPOT CODE: ${committedEirMeta.depotCode}
 DATE / TIME: ${receiptDateStr} ${receiptTimeStr}
 SHIPPING LINE: ${committedContainer.shippingLine} (${committedEirMeta.shippingLineCode})
 CONTAINER NO: ${committedContainer.formattedId}
@@ -569,7 +579,28 @@ STATUS: COMMITTED & STACKED
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* 1. Shipping Line Select */}
+                {/* 1. Depot Select */}
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>
+                    Depot / Facility *
+                  </label>
+                  <select
+                    value={depotCode}
+                    onChange={(e) => setDepotCode(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border focus:outline-none transition-colors uppercase"
+                    style={{ backgroundColor: innerBg, borderColor: cardBorder, color: textPrimary }}
+                    required
+                  >
+                    {DEPOT_OPTIONS.map((depot) => (
+                      <option key={depot.code} value={depot.code}>{depot.label}</option>
+                    ))}
+                  </select>
+                  <span className="text-[10px] mt-1 block" style={{ color: textMuted }}>
+                    Select the receiving depot for this container.
+                  </span>
+                </div>
+
+                {/* 2. Shipping Line Select */}
                 <div>
                   <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>
                     Shipping Line / Carrier *
@@ -589,7 +620,7 @@ STATUS: COMMITTED & STACKED
                   </span>
                 </div>
 
-                {/* 2. System-Populated Shipping Line Code */}
+                {/* 3. System-Populated Shipping Line Code */}
                 <div>
                   <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>
                     Carrier Interchange Code (System Populated) *
@@ -619,7 +650,7 @@ STATUS: COMMITTED & STACKED
                   </span>
                 </div>
 
-                {/* 3. Cumulative Receipt Number (Explicit Field) */}
+                {/* 4. Cumulative Receipt Number (Explicit Field) */}
                 <div>
                   <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>
                     System Generated Receipt Number *
@@ -635,7 +666,7 @@ STATUS: COMMITTED & STACKED
                   </span>
                 </div>
 
-                {/* 4. Booking Reference */}
+                {/* 5. Booking Reference */}
                 <div>
                   <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>
                     Booking / Release Reference
@@ -650,7 +681,7 @@ STATUS: COMMITTED & STACKED
                   />
                 </div>
 
-                {/* 5. Delivery Order (DO) */}
+                {/* 6. Delivery Order (DO) */}
                 <div>
                   <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>
                     Delivery Order (DO) / Waybill
@@ -665,7 +696,7 @@ STATUS: COMMITTED & STACKED
                   />
                 </div>
 
-                {/* 6. Shipper / Account Holder */}
+                {/* 7. Shipper / Account Holder */}
                 <div>
                   <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>
                     Account / Consignee
@@ -1435,7 +1466,8 @@ STATUS: COMMITTED & STACKED
               {/* Data Grid */}
               <div className="grid grid-cols-2 gap-3 text-[11px]">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold uppercase text-slate-500">1. CARRIER & BOOKING</span>
+                  <span className="text-[10px] font-bold uppercase text-slate-500">1. DEPOT & CARRIER</span>
+                  <div>DEPOT CODE: <strong className="text-teal-400">{committedEirMeta.depotCode}</strong></div>
                   <div>SHIPPING LINE: <strong style={{ color: textPrimary }}>{committedContainer.shippingLine}</strong></div>
                   <div>CARRIER CODE: <strong className="text-teal-400">{committedEirMeta.shippingLineCode}</strong></div>
                   <div>BOOKING REF: <strong style={{ color: textPrimary }}>{committedContainer.bookingReference}</strong></div>

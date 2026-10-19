@@ -142,7 +142,7 @@ export default function App() {
         });
         return changed ? updated : prev;
       });
-    }, 10000); // 10s precision ticker
+    }, 1000); // One-second ticker keeps the live clock visibly current
 
     // Immediate sync on window focus or tab visibility change
     const handleSync = () => {
