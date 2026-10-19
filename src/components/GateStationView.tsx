@@ -59,8 +59,8 @@ const SHIPPING_LINE_PRESETS: ShippingLinePreset[] = [
 const MONTH_CODES = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
 const DEPOT_OPTIONS = [
-  { code: 'BAKHRE30', label: 'BAKHRE30 — ONE Bakhre Depot' },
-  { code: 'ALRHRE31', label: 'ALRHRE31 — ONE Al Rhenish Depot' }
+  { code: 'BAKHRE30', label: 'BAKHRE30 — BAK LOGISTICS' },
+  { code: 'ALRHRE31', label: 'ALRHRE31 — ALRO CONTAINER DEPOT' }
 ] as const;
 
 // Helper to get cumulative receipt number (e.g., OCT0001, OCT0002...)
