@@ -4,7 +4,6 @@ import {
   CheckCircle2, 
   Layers, 
   Package, 
-  Truck, 
   SlidersHorizontal, 
   Activity, 
   FileText, 
@@ -75,12 +74,6 @@ export const HyliumSidebar: React.FC<HyliumSidebarProps> = ({
       id: 'inventory' as HyliumNavId,
       label: 'Inventory',
       icon: Package,
-      hasSubmenu: false
-    },
-    {
-      id: 'dispatch' as HyliumNavId,
-      label: 'Receive',
-      icon: Truck,
       hasSubmenu: false
     },
     {

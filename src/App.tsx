@@ -380,7 +380,7 @@ export default function App() {
           {currentTab === 'home' && (
             <HyliumHomeDashboard
               isDark={isDark}
-              onNavigateToOperations={() => setCurrentTab('operations')}
+              onNavigateToOperations={() => setCurrentTab('dispatch')}
               onNavigateToDispatch={() => setCurrentTab('dispatch')}
               onNavigateToInventory={() => setCurrentTab('inventory')}
               onNavigateToReports={() => setCurrentTab('reports')}
