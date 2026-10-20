@@ -10,7 +10,7 @@ import {
 
 interface HyliumHomeDashboardProps {
   isDark: boolean;
-  onNavigateToOperations: () => void;
+  onNavigateToReceive: () => void;
   onNavigateToDispatch: () => void;
   onNavigateToInventory: () => void;
   onNavigateToReports: () => void;
@@ -22,7 +22,7 @@ interface HyliumHomeDashboardProps {
 
 export const HyliumHomeDashboard: React.FC<HyliumHomeDashboardProps> = ({
   isDark,
-  onNavigateToOperations,
+  onNavigateToReceive,
   onNavigateToDispatch,
   onNavigateToInventory,
   onNavigateToReports,
@@ -143,7 +143,7 @@ export const HyliumHomeDashboard: React.FC<HyliumHomeDashboardProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: RECEIVE */}
         <div 
-          onClick={onNavigateToOperations}
+          onClick={onNavigateToReceive}
           className="p-5 rounded-2xl transition-all duration-200 hover:-translate-y-0.5 cursor-pointer shadow-xs border group"
           style={{ 
             backgroundColor: cardBg, 

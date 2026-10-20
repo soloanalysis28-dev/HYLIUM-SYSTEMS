@@ -225,7 +225,11 @@ export default function App() {
     showToast(`Container ${newContainer.formattedId} registered via Gate In.`);
   };
 
-  const handleGateOutSuccess = (containerId: string, truckOut: string) => {
+  const handleGateOutSuccess = (
+    containerId: string,
+    truckOut: string,
+    releaseDetails?: { dispatchReference: string; driverName: string; driverId: string }
+  ) => {
     const exitTimestamp = new Date().toISOString();
     setContainers((prev) =>
       prev.map((c) =>
@@ -244,7 +248,7 @@ export default function App() {
                   action: 'Gate Out Release',
                   locationText: 'Depot Gate Lane 03 (Outbound)',
                   operator: `Gate Officer (Hauler: ${truckOut})`,
-                  details: 'Demurrage settled. Outbound EIR signed. Container dispatched.'
+                  details: `Dispatch ${releaseDetails?.dispatchReference ?? 'release'} completed. Driver: ${releaseDetails?.driverName ?? 'Not recorded'} (${releaseDetails?.driverId ?? 'No ID'}). Demurrage settled. Outbound EIR signed. Container dispatched.`
                 }
               ]
             }
@@ -307,8 +311,10 @@ export default function App() {
         return { title: 'Operations' };
       case 'inventory':
         return { title: 'Inventory' };
+      case 'receive':
+        return { title: 'Receive & Gate In' };
       case 'dispatch':
-        return { title: 'Receive & Gate Station' };
+        return { title: 'Dispatch & Gate Out' };
       case 'stock-control':
         return { title: 'Stock Control' };
       case 'insights':
@@ -380,7 +386,7 @@ export default function App() {
           {currentTab === 'home' && (
             <HyliumHomeDashboard
               isDark={isDark}
-              onNavigateToOperations={() => setCurrentTab('dispatch')}
+              onNavigateToReceive={() => setCurrentTab('receive')}
               onNavigateToDispatch={() => setCurrentTab('dispatch')}
               onNavigateToInventory={() => setCurrentTab('inventory')}
               onNavigateToReports={() => setCurrentTab('reports')}
@@ -413,11 +419,13 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'dispatch' && (
+          {(currentTab === 'receive' || currentTab === 'dispatch') && (
             <GateStationView
+              key={currentTab}
               containers={containers}
               zones={zones}
               isDark={isDark}
+              initialLane={currentTab === 'dispatch' ? 'OUT' : 'IN'}
               onGateInSuccess={handleGateInSuccess}
               onGateOutSuccess={handleGateOutSuccess}
               onNavigateToInventory={() => setCurrentTab('inventory')}

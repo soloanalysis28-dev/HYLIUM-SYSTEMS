@@ -32,8 +32,9 @@ interface GateStationViewProps {
   containers: ContainerItem[];
   zones: YardZone[];
   isDark?: boolean;
+  initialLane?: 'IN' | 'OUT';
   onGateInSuccess: (newContainer: ContainerItem) => void;
-  onGateOutSuccess: (containerId: string, truckOut: string) => void;
+  onGateOutSuccess: (containerId: string, truckOut: string, releaseDetails?: { dispatchReference: string; driverName: string; driverId: string }) => void;
   onNavigateToInventory?: () => void;
 }
 
@@ -94,12 +95,13 @@ export const GateStationView: React.FC<GateStationViewProps> = ({
   containers,
   zones,
   isDark = false,
+  initialLane = 'IN',
   onGateInSuccess,
   onGateOutSuccess,
   onNavigateToInventory
 }) => {
   // Mode: Receive (Inbound Intake) vs Gate Out (Dispatch)
-  const [activeLane, setActiveLane] = useState<'IN' | 'OUT'>('IN');
+  const [activeLane, setActiveLane] = useState<'IN' | 'OUT'>(initialLane);
 
   // Multi-step Wizard: 1: Details (Shipping Line & Receipt Number), 2: Container & Equipment, 3: Driver & Transport
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -147,6 +149,7 @@ export const GateStationView: React.FC<GateStationViewProps> = ({
   const [inspectionRemarks, setInspectionRemarks] = useState<string>('Clean interior, minor exterior paint scuff, CSC data plate verified');
   const [sealNumber, setSealNumber] = useState<string>('');
   const [cargoDescription, setCargoDescription] = useState<string>('EMPTY RETURN / RE-POSITIONING');
+  const [moveType, setMoveType] = useState<'Empty' | 'Full' | 'Cabotage' | 'Relocation'>('Empty');
 
   // Live ISO Check Digit
   const inExpectedCheck = useMemo(() => {
@@ -224,6 +227,7 @@ export const GateStationView: React.FC<GateStationViewProps> = ({
     driverId: string;
     containerDom: string;
     isFullOrEmpty: 'FULL' | 'EMPTY';
+    moveType: 'Empty' | 'Full' | 'Cabotage' | 'Relocation';
     slotText: string;
   } | null>(null);
   const [showEirModal, setShowEirModal] = useState<boolean>(false);
@@ -234,6 +238,12 @@ export const GateStationView: React.FC<GateStationViewProps> = ({
   const [outTruckPlate, setOutTruckPlate] = useState('TX-1092-AA');
   const [outDriverName, setOutDriverName] = useState('Arthur Pendelton');
   const [outDriverId, setOutDriverId] = useState('ID-55192083');
+  const [dispatchReference, setDispatchReference] = useState(() => `DSP-${Date.now().toString().slice(-6)}`);
+
+  useEffect(() => {
+    setActiveLane(initialLane);
+    setCurrentStep(1);
+  }, [initialLane]);
 
   const selectedOutContainer = containers.find((c) => c.id === selectedOutContainerId);
 
@@ -295,6 +305,7 @@ export const GateStationView: React.FC<GateStationViewProps> = ({
       bookingReference: bookingRef,
       billOfLading: `BL-${shippingLineCode}-${Math.floor(200000 + Math.random() * 800000)}`,
       cargoDescription: cargoDescription,
+      loadType: moveType,
       consignee: consignee,
       destinationPort: 'Rotterdam (NLRTM)',
       dwellDays: 1, // Formula =$R$1 - H155 + 1: Day of arrival is Day 1
@@ -310,7 +321,7 @@ export const GateStationView: React.FC<GateStationViewProps> = ({
           action: `Inbound Receipt (${currentReceiptNum})`,
           locationText: `Depot Gate Lane 01 (${targetZoneObj.name})`,
           operator: `Gate Officer (${driverName} / ${driverId} via ${transportMode})`,
-          details: `EIR ${currentReceiptNum} issued. Code: ${shippingLineCode}. Mode: ${transportMode}. Status: ${isFullOrEmpty}. Tare: ${tareWeightKg}kg, Gross: ${grossWeightKg}kg. DOM: ${containerDom}.`
+          details: `EIR ${currentReceiptNum} issued. Code: ${shippingLineCode}. Mode: ${transportMode}. Status: ${isFullOrEmpty}. Move type: ${moveType}. Tare: ${tareWeightKg}kg, Gross: ${grossWeightKg}kg. DOM: ${containerDom}.`
         }
       ],
       lastInspection: {
@@ -333,6 +344,7 @@ export const GateStationView: React.FC<GateStationViewProps> = ({
       driverId,
       containerDom,
       isFullOrEmpty,
+      moveType,
       slotText: `Zone ${recommendedZone} Bay ${String(targetBay).padStart(2, '0')} Row ${targetRow} Tier ${targetTier}`
     });
 
@@ -364,8 +376,10 @@ export const GateStationView: React.FC<GateStationViewProps> = ({
   const handleGateOutSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOutContainerId) return;
-    onGateOutSuccess(selectedOutContainerId, outTruckPlate);
+    onGateOutSuccess(selectedOutContainerId, outTruckPlate, { dispatchReference, driverName: outDriverName, driverId: outDriverId });
     setSelectedOutContainerId('');
+    setCurrentStep(1);
+    setDispatchReference(`DSP-${Date.now().toString().slice(-6)}`);
   };
 
   // Printing trigger
@@ -385,6 +399,7 @@ SHIPPING LINE: ${committedContainer.shippingLine} (${committedEirMeta.shippingLi
 CONTAINER NO: ${committedContainer.formattedId}
 SIZE & TYPE: ${containerSize} (${committedContainer.isoType})
 STATUS: ${committedEirMeta.isFullOrEmpty}
+MOVE TYPE: ${committedEirMeta.moveType}
 TARE WEIGHT: ${committedContainer.tareWeightKg} KG | GROSS: ${committedContainer.grossWeightKg} KG
 CONTAINER DOM: ${committedEirMeta.containerDom}
 TRANSPORT: ${committedEirMeta.transportMode} (${committedEirMeta.vehicleId})
@@ -418,11 +433,13 @@ STATUS: COMMITTED & STACKED
                 <Truck className="w-4 h-4" />
               </span>
               <h2 className="text-base sm:text-lg font-bold tracking-tight" style={{ color: textPrimary }}>
-                Receive & Interchange Gate Station
+                {activeLane === 'IN' ? 'Receive & Interchange Gate Station' : 'Dispatch & Interchange Gate Station'}
               </h2>
             </div>
             <p className="text-xs mt-0.5" style={{ color: textMuted }}>
-              3-stage container receipt intake, cumulative receipt numbering, equipment verification & gate release.
+              {activeLane === 'IN'
+                ? '3-stage container receipt intake, cumulative receipt numbering, equipment verification & gate in.'
+                : '3-stage dispatch intake, equipment verification, driver details & gate-out release.'}
             </p>
           </div>
 
@@ -430,7 +447,7 @@ STATUS: COMMITTED & STACKED
           <div className="flex items-center gap-1 p-1 rounded-xl border" style={{ backgroundColor: innerBg, borderColor: cardBorder }}>
             <button
               type="button"
-              onClick={() => setActiveLane('IN')}
+              onClick={() => { setActiveLane('IN'); setCurrentStep(1); }}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeLane === 'IN'
                   ? 'bg-teal-500 text-slate-950 shadow-xs'
@@ -442,7 +459,7 @@ STATUS: COMMITTED & STACKED
             </button>
             <button
               type="button"
-              onClick={() => setActiveLane('OUT')}
+              onClick={() => { setActiveLane('OUT'); setCurrentStep(1); }}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeLane === 'OUT'
                   ? 'bg-amber-500 text-slate-950 shadow-xs'
@@ -455,9 +472,8 @@ STATUS: COMMITTED & STACKED
           </div>
         </div>
 
-        {/* 3-STEP PROGRESS STEPPER (Only for Receive Mode) */}
-        {activeLane === 'IN' && (
-          <div className="mt-5 pt-4 border-t" style={{ borderColor: cardBorder }}>
+        {/* Shared three-stage workflow for receipt and dispatch */}
+        <div className="mt-5 pt-4 border-t" style={{ borderColor: cardBorder }}>
             <div className="grid grid-cols-3 gap-2 sm:gap-4">
               {/* Step 1 */}
               <button
@@ -479,10 +495,10 @@ STATUS: COMMITTED & STACKED
                   {currentStep > 1 && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
                 </div>
                 <div className="text-xs font-bold truncate" style={{ color: textPrimary }}>
-                  1. Details Section
+                  {activeLane === 'IN' ? '1. Receipt Details' : '1. Dispatch Details'}
                 </div>
                 <div className="text-[11px] truncate mt-0.5" style={{ color: textMuted }}>
-                  Line & Receipt # ({receiptMeta.receiptNumber})
+                  {activeLane === 'IN' ? `Line & Receipt # (${receiptMeta.receiptNumber})` : 'Container & release reference'}
                 </div>
               </button>
 
@@ -506,10 +522,10 @@ STATUS: COMMITTED & STACKED
                   {currentStep > 2 && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
                 </div>
                 <div className="text-xs font-bold truncate" style={{ color: textPrimary }}>
-                  2. Container Details
+                  2. Equipment Details
                 </div>
                 <div className="text-[11px] truncate mt-0.5" style={{ color: textMuted }}>
-                  Size, Full/Empty, Tare, DOM
+                  {activeLane === 'IN' ? 'Size, Full/Empty, Move Type, Tare, DOM' : 'Container identity, condition & weights'}
                 </div>
               </button>
 
@@ -534,12 +550,11 @@ STATUS: COMMITTED & STACKED
                   3. Driver & Transport
                 </div>
                 <div className="text-[11px] truncate mt-0.5" style={{ color: textMuted }}>
-                  Truck/Train, ID & Commit EIR
+                  {activeLane === 'IN' ? 'Truck/Train, ID & Commit EIR' : 'Truck, driver ID & commit release'}
                 </div>
               </button>
             </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* ======================================================== */}
@@ -723,7 +738,7 @@ STATUS: COMMITTED & STACKED
                   onClick={() => setCurrentStep(2)}
                   className="px-5 py-2.5 rounded-xl font-bold text-xs bg-teal-500 hover:bg-teal-400 text-slate-950 transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
                 >
-                  <span>Finish Step 1: Next (Container Details)</span>
+                  <span>Finish Step 1: Next (Equipment Details)</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -731,7 +746,7 @@ STATUS: COMMITTED & STACKED
           )}
 
           {/* ---------------------------------------------------- */}
-          {/* STEP 2: CONTAINER SIZE, FULL/EMPTY, TARE, DOM        */}
+          {/* STEP 2: EQUIPMENT DETAILS                            */}
           {/* ---------------------------------------------------- */}
           {currentStep === 2 && (
             <div className="space-y-6">
@@ -739,7 +754,7 @@ STATUS: COMMITTED & STACKED
                 <div>
                   <h3 className="text-sm font-bold tracking-tight uppercase font-mono text-teal-400 flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-teal-500/20 flex items-center justify-center text-xs">2</span>
-                    Stage 2: Container Size, Full or Empty, Tare Weight & DOM
+                    Stage 2: Equipment Details
                   </h3>
                   <p className="text-xs mt-0.5" style={{ color: textMuted }}>
                     Populate physical specifications, tare weight, date of manufacture (DOM), and full/empty condition.
@@ -932,8 +947,8 @@ STATUS: COMMITTED & STACKED
                 </div>
               </div>
 
-              {/* 4. Equipment ISO Typology & Inspection */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* 4. Equipment ISO Typology, Move Type & Inspection */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>
                     ISO Typology
@@ -951,6 +966,24 @@ STATUS: COMMITTED & STACKED
                     <option value="40RF">40RF - 40ft Reefer Cold Chain</option>
                     <option value="40FR">40FR - 40ft Flat Rack (OOG)</option>
                     <option value="20TK">20TK - 20ft ISO Liquid Tank</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>
+                    Move Type *
+                  </label>
+                  <select
+                    value={moveType}
+                    onChange={(e) => setMoveType(e.target.value as typeof moveType)}
+                    className="w-full px-3 py-2 text-xs font-mono rounded-xl border focus:outline-none"
+                    style={{ backgroundColor: innerBg, borderColor: cardBorder, color: textPrimary }}
+                    required
+                  >
+                    <option value="Empty">Empty</option>
+                    <option value="Full">Full</option>
+                    <option value="Cabotage">Cabotage</option>
+                    <option value="Relocation">Relocation</option>
                   </select>
                 </div>
 
@@ -1279,126 +1312,134 @@ STATUS: COMMITTED & STACKED
       {/* LANE 2: GATE OUT FORM (DISPATCH RELEASE)                 */}
       {/* ======================================================== */}
       {activeLane === 'OUT' && (
-        <form 
-          onSubmit={handleGateOutSubmit} 
-          className="rounded-2xl p-4 sm:p-6 border transition-colors shadow-xs space-y-4"
-          style={{ backgroundColor: cardBg, borderColor: cardBorder }}
-        >
-          <div className="pb-3 border-b flex items-center justify-between" style={{ borderColor: cardBorder }}>
-            <div>
-              <h3 className="text-sm font-bold tracking-tight uppercase font-mono text-amber-400">
-                Gate Out Dispatch & Release
-              </h3>
-              <p className="text-xs mt-0.5" style={{ color: textMuted }}>
-                Select container to release from yard, record driver & pickup haulier, and generate Equipment Interchange Outbound Receipt.
-              </p>
-            </div>
+        <div className="rounded-2xl p-4 sm:p-6 border transition-colors shadow-xs space-y-5" style={{ backgroundColor: cardBg, borderColor: cardBorder }}>
+          <div className="pb-3 border-b" style={{ borderColor: cardBorder }}>
+            <h3 className="text-sm font-bold tracking-tight uppercase font-mono text-amber-400">
+              {currentStep === 1 ? 'Stage 1: Dispatch Details' : currentStep === 2 ? 'Stage 2: Equipment Details' : 'Stage 3: Driver & Transport'}
+            </h3>
+            <p className="text-xs mt-0.5" style={{ color: textMuted }}>
+              {currentStep === 1
+                ? 'Choose an active yard container and confirm its dispatch reference.'
+                : currentStep === 2
+                  ? 'Verify the selected container, cargo status, condition and yard position.'
+                  : 'Enter outbound vehicle and driver credentials, then commit the gate-out release.'}
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>
-                Select Container to Gate Out *
-              </label>
-              <select
-                value={selectedOutContainerId}
-                onChange={(e) => setSelectedOutContainerId(e.target.value)}
-                className="w-full px-3 py-2 text-xs font-mono rounded-xl border focus:outline-none"
-                style={{ backgroundColor: innerBg, borderColor: cardBorder, color: textPrimary }}
-                required
-              >
-                <option value="">-- Choose container from active yard inventory --</option>
-                {containers
-                  .filter((c) => c.status === 'In Yard')
-                  .slice(0, 100)
-                  .map((c) => (
+          {currentStep === 1 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>Dispatch Reference *</label>
+                <input
+                  type="text"
+                  value={dispatchReference}
+                  onChange={(e) => setDispatchReference(e.target.value.toUpperCase())}
+                  className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border focus:outline-none uppercase"
+                  style={{ backgroundColor: innerBg, borderColor: cardBorder, color: textPrimary }}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>Select Container to Gate Out *</label>
+                <select
+                  value={selectedOutContainerId}
+                  onChange={(e) => setSelectedOutContainerId(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-mono rounded-xl border focus:outline-none"
+                  style={{ backgroundColor: innerBg, borderColor: cardBorder, color: textPrimary }}
+                  required
+                >
+                  <option value="">-- Choose container from active yard inventory --</option>
+                  {containers.filter((c) => c.status === 'In Yard').slice(0, 100).map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.formattedId} — {c.shippingLine} — {c.isoType} — Dwell: {c.dwellDays}d — Slot: Z{c.location.zone}B{c.location.bay}R{c.location.row}T{c.location.tier}
                     </option>
                   ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>
-                Outbound Truck Plate *
-              </label>
-              <input
-                type="text"
-                value={outTruckPlate}
-                onChange={(e) => setOutTruckPlate(e.target.value.toUpperCase())}
-                className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border focus:outline-none uppercase"
-                style={{ backgroundColor: innerBg, borderColor: cardBorder, color: textPrimary }}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>
-                Driver Full Name *
-              </label>
-              <input
-                type="text"
-                value={outDriverName}
-                onChange={(e) => setOutDriverName(e.target.value)}
-                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border focus:outline-none"
-                style={{ backgroundColor: innerBg, borderColor: cardBorder, color: textPrimary }}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>
-                Driver ID / CDL License Number *
-              </label>
-              <input
-                type="text"
-                value={outDriverId}
-                onChange={(e) => setOutDriverId(e.target.value)}
-                className="w-full px-3 py-2 text-xs font-mono rounded-xl border focus:outline-none"
-                style={{ backgroundColor: innerBg, borderColor: cardBorder, color: textPrimary }}
-                required
-              />
-            </div>
-          </div>
-
-          {selectedOutContainer && (
-            <div className="p-4 rounded-xl border font-mono text-xs space-y-2" style={{ backgroundColor: innerBg, borderColor: cardBorder }}>
-              <span className="font-bold uppercase text-amber-400 block">Outbound Release Summary</span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div>
-                  <span className="text-[10px] block" style={{ color: textMuted }}>CARRIER</span>
-                  <span className="font-bold" style={{ color: textPrimary }}>{selectedOutContainer.shippingLine}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] block" style={{ color: textMuted }}>TYPOLOGY</span>
-                  <span className="font-bold" style={{ color: textPrimary }}>{selectedOutContainer.isoType} ({selectedOutContainer.teu} TEU)</span>
-                </div>
-                <div>
-                  <span className="text-[10px] block" style={{ color: textMuted }}>DWELL DAYS</span>
-                  <span className="font-bold text-teal-400">{selectedOutContainer.dwellDays} days</span>
-                </div>
-                <div>
-                  <span className="text-[10px] block" style={{ color: textMuted }}>LOCATION</span>
-                  <span className="font-bold text-amber-400">
-                    Z{selectedOutContainer.location.zone}-B{selectedOutContainer.location.bay}-R{selectedOutContainer.location.row}-T{selectedOutContainer.location.tier}
-                  </span>
-                </div>
+                </select>
               </div>
             </div>
           )}
 
-          <div className="flex items-center justify-end pt-3 border-t" style={{ borderColor: cardBorder }}>
+          {currentStep === 2 && (
+            selectedOutContainer ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl border font-mono text-xs space-y-3" style={{ backgroundColor: innerBg, borderColor: cardBorder }}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-bold uppercase text-amber-400">Equipment verification</span>
+                    <span className="font-bold text-teal-400">{selectedOutContainer.formattedId}</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div><span className="text-[10px] block" style={{ color: textMuted }}>CARRIER</span><span className="font-bold" style={{ color: textPrimary }}>{selectedOutContainer.shippingLine}</span></div>
+                    <div><span className="text-[10px] block" style={{ color: textMuted }}>ISO TYPE / SIZE</span><span className="font-bold" style={{ color: textPrimary }}>{selectedOutContainer.isoType} ({selectedOutContainer.teu} TEU)</span></div>
+                    <div><span className="text-[10px] block" style={{ color: textMuted }}>MOVE TYPE</span><span className="font-bold" style={{ color: textPrimary }}>{selectedOutContainer.loadType || (selectedOutContainer.grossWeightKg > selectedOutContainer.tareWeightKg ? 'Full' : 'Empty')}</span></div>
+                    <div><span className="text-[10px] block" style={{ color: textMuted }}>TARE / GROSS</span><span className="font-bold" style={{ color: textPrimary }}>{selectedOutContainer.tareWeightKg} / {selectedOutContainer.grossWeightKg} kg</span></div>
+                    <div><span className="text-[10px] block" style={{ color: textMuted }}>SEAL NUMBER</span><span className="font-bold" style={{ color: textPrimary }}>{selectedOutContainer.sealNumber || 'N/A'}</span></div>
+                    <div><span className="text-[10px] block" style={{ color: textMuted }}>DWELL</span><span className="font-bold text-teal-400">{selectedOutContainer.dwellDays} days</span></div>
+                    <div className="col-span-2 sm:col-span-3"><span className="text-[10px] block" style={{ color: textMuted }}>YARD LOCATION</span><span className="font-bold text-amber-400">Z{selectedOutContainer.location.zone}-B{selectedOutContainer.location.bay}-R{selectedOutContainer.location.row}-T{selectedOutContainer.location.tier}</span></div>
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl border text-xs" style={{ backgroundColor: innerBg, borderColor: cardBorder }}>
+                  Dispatch reference: <span className="font-mono font-bold text-amber-400">{dispatchReference}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-amber-400">Select a container in Stage 1 before continuing.</p>
+            )
+          )}
+
+          {currentStep === 3 && (
+            <form id="dispatch-release-form" onSubmit={handleGateOutSubmit} className="space-y-4">
+              <div className="p-4 rounded-xl border space-y-3" style={{ backgroundColor: innerBg, borderColor: cardBorder }}>
+                <span className="text-xs font-mono font-bold uppercase tracking-wider block" style={{ color: textPrimary }}>Outbound truck & driver details</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>Outbound Truck Plate *</label>
+                    <input type="text" value={outTruckPlate} onChange={(e) => setOutTruckPlate(e.target.value.toUpperCase())} className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border focus:outline-none uppercase" style={{ backgroundColor: cardBg, borderColor: cardBorder, color: textPrimary }} required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>Driver Full Name *</label>
+                    <input type="text" value={outDriverName} onChange={(e) => setOutDriverName(e.target.value)} className="w-full px-3 py-2 text-xs font-semibold rounded-xl border focus:outline-none" style={{ backgroundColor: cardBg, borderColor: cardBorder, color: textPrimary }} required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: textMuted }}>Driver ID / CDL License Number *</label>
+                    <input type="text" value={outDriverId} onChange={(e) => setOutDriverId(e.target.value)} className="w-full px-3 py-2 text-xs font-mono rounded-xl border focus:outline-none" style={{ backgroundColor: cardBg, borderColor: cardBorder, color: textPrimary }} required />
+                  </div>
+                </div>
+              </div>
+              {selectedOutContainer && (
+                <div className="p-4 rounded-xl border font-mono text-xs" style={{ backgroundColor: innerBg, borderColor: cardBorder }}>
+                  <span className="font-bold uppercase text-amber-400">Dispatch summary</span>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <span>REFERENCE: <strong style={{ color: textPrimary }}>{dispatchReference}</strong></span>
+                    <span>CONTAINER: <strong style={{ color: textPrimary }}>{selectedOutContainer.formattedId}</strong></span>
+                    <span>DRIVER: <strong style={{ color: textPrimary }}>{outDriverName} ({outDriverId})</strong></span>
+                    <span>TRUCK: <strong style={{ color: textPrimary }}>{outTruckPlate}</strong></span>
+                  </div>
+                </div>
+              )}
+            </form>
+          )}
+
+          <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: cardBorder }}>
             <button
-              type="submit"
-              disabled={!selectedOutContainerId}
-              className="px-5 py-2.5 rounded-xl font-bold text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              type="button"
+              onClick={() => setCurrentStep((currentStep === 3 ? 2 : 1) as 1 | 2 | 3)}
+              disabled={currentStep === 1}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold border hover:bg-slate-500/10 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+              style={{ borderColor: cardBorder, color: textPrimary }}
             >
-              <ArrowUpFromLine className="w-4 h-4" />
-              <span>Dispatch Container Out of Yard</span>
+              <ChevronLeft className="w-4 h-4" /><span>{currentStep === 1 ? 'Stage 1' : `Back to Stage ${currentStep - 1}`}</span>
             </button>
+            {currentStep < 3 ? (
+              <button type="button" onClick={() => setCurrentStep((currentStep + 1) as 2 | 3)} disabled={currentStep === 1 && (!selectedOutContainerId || !dispatchReference.trim())} className="px-5 py-2.5 rounded-xl font-bold text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50">
+                <span>Continue to Stage {currentStep + 1}</span><ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button type="submit" form="dispatch-release-form" disabled={!selectedOutContainerId || !dispatchReference.trim()} className="px-5 py-2.5 rounded-xl font-bold text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50">
+                <ArrowUpFromLine className="w-4 h-4" /><span>Commit Dispatch & Gate Out</span>
+              </button>
+            )}
           </div>
-        </form>
+        </div>
       )}
 
       {/* ======================================================== */}
@@ -1479,6 +1520,7 @@ STATUS: COMMITTED & STACKED
                   <div>CONTAINER NO: <strong className="text-teal-400">{committedContainer.formattedId}</strong></div>
                   <div>SIZE & TYPE: <strong style={{ color: textPrimary }}>{containerSize} ({committedContainer.isoType})</strong></div>
                   <div>STATUS: <strong className={committedEirMeta.isFullOrEmpty === 'EMPTY' ? 'text-emerald-400' : 'text-cyan-400'}>{committedEirMeta.isFullOrEmpty}</strong></div>
+                  <div>MOVE TYPE: <strong style={{ color: textPrimary }}>{committedEirMeta.moveType}</strong></div>
                   <div>DOM (DATE MFD): <strong style={{ color: textPrimary }}>{committedEirMeta.containerDom}</strong></div>
                 </div>
               </div>

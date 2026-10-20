@@ -17,6 +17,7 @@ export type HyliumNavId =
   | 'home' 
   | 'operations' 
   | 'inventory' 
+  | 'receive'
   | 'dispatch' 
   | 'stock-control' 
   | 'insights' 
@@ -66,7 +67,7 @@ export const HyliumSidebar: React.FC<HyliumSidebarProps> = ({
       hasSubmenu: true,
       subItems: [
         { id: 'operations' as HyliumNavId, label: 'Yard Stacking' },
-        { id: 'dispatch' as HyliumNavId, label: 'Receive (Gate In)' },
+        { id: 'receive' as HyliumNavId, label: 'Receive (Gate In)' },
         { id: 'stock-control' as HyliumNavId, label: 'Stock Buffer' }
       ]
     },
