@@ -14,7 +14,8 @@ import {
   ThermometerSnowflake,
   ShieldAlert,
   Percent,
-  Sparkles
+  Sparkles,
+  Lock
 } from 'lucide-react';
 import { ContainerItem, ContainerTypeCode, CONTAINER_TYPOLOGY_SPECS, DEFAULT_ENABLED_CONTAINER_TYPES } from '../types/depot';
 import { RustCodebaseView } from './RustCodebaseView';
@@ -206,9 +207,12 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
                       min={50}
                       max={5000}
                       step={5}
+                      disabled={consoleEdition === 'client'}
                       value={capacityInput}
                       onChange={(e) => setCapacityInput(parseInt(e.target.value, 10) || 0)}
-                      className="w-full px-4 py-2.5 rounded-xl font-mono text-base font-bold transition-colors focus:outline-none"
+                      className={`w-full px-4 py-2.5 rounded-xl font-mono text-base font-bold transition-colors focus:outline-none ${
+                        consoleEdition === 'client' ? 'opacity-60 cursor-not-allowed' : ''
+                      }`}
                       style={{
                         backgroundColor: surface2,
                         color: textPrimary,
@@ -225,16 +229,21 @@ export const HyliumSettingsView: React.FC<HyliumSettingsViewProps> = ({
 
                   <button
                     type="button"
+                    disabled={consoleEdition === 'client'}
                     onClick={handleSaveCapacity}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                      consoleEdition === 'client' 
+                        ? 'opacity-40 cursor-not-allowed bg-slate-500/20 text-slate-400' 
+                        : 'hover:scale-105 active:scale-95 cursor-pointer'
+                    }`}
                     style={{
-                      backgroundColor: isDark ? '#123D3B' : '#E8F8F5',
-                      color: isDark ? '#53D0BC' : '#128B7B',
+                      backgroundColor: consoleEdition === 'client' ? undefined : (isDark ? '#123D3B' : '#E8F8F5'),
+                      color: consoleEdition === 'client' ? undefined : (isDark ? '#53D0BC' : '#128B7B'),
                       border: `1px solid ${isDark ? '#18B7A0' : '#DDEDEA'}`
                     }}
                   >
-                    {savedSuccess ? <Check className="w-4 h-4 text-emerald-400" /> : <Save className="w-4 h-4" />}
-                    <span>{savedSuccess ? 'Capacity Saved' : 'Save Capacity'}</span>
+                    {consoleEdition === 'client' ? <Lock className="w-4 h-4 text-amber-500" /> : savedSuccess ? <Check className="w-4 h-4 text-emerald-400" /> : <Save className="w-4 h-4" />}
+                    <span>{consoleEdition === 'client' ? 'Locked (Admin Only)' : savedSuccess ? 'Capacity Saved' : 'Save Capacity'}</span>
                   </button>
 
                   <button

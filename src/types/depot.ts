@@ -449,3 +449,32 @@ export interface OutboundWebhook {
   payloadSummary: string;
 }
 
+export type ConsoleEdition = 'admin' | 'client';
+
+export type ClearanceLevelNumber = 1 | 2 | 3 | 4 | 5;
+
+export interface ConsoleEditionConfig {
+  edition: ConsoleEdition;
+  clearanceLevel: ClearanceLevelNumber;
+  title: string;
+  badgeLabel: string;
+  description: string;
+  targetRole: string;
+  features: {
+    gateOperations: boolean;
+    yardMovement: boolean;
+    movementLedgerAudit: boolean;
+    movementExport: boolean;
+    damageInspection: boolean;
+    repairJobsCreation: boolean;
+    tariffEditing: boolean;
+    invoiceGeneration: boolean;
+    invoiceSettlement: boolean;
+    depotCapacityConfig: boolean;
+    typologyConfig: boolean;
+    webhooksAndApiKeys: boolean;
+    systemLogsPurge: boolean;
+  };
+}
+
+

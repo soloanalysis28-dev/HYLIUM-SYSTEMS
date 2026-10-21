@@ -13,6 +13,8 @@ import {
   PanelLeftClose
 } from 'lucide-react';
 
+import { ConsoleEdition } from '../types/depot';
+
 export type HyliumNavId = 
   | 'home' 
   | 'operations' 

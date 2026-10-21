@@ -20,7 +20,8 @@ import {
   DEFAULT_ENABLED_CONTAINER_TYPES, 
   CONTAINER_TYPOLOGY_SPECS,
   MovementTransaction,
-  RepairWorkOrder
+  RepairWorkOrder,
+  ConsoleEdition
 } from './types/depot';
 import { INITIAL_MOVEMENT_TRANSACTIONS, INITIAL_REPAIR_WORK_ORDERS } from './data/operationsData';
 import { calculateRealTimeDwellDays } from './utils/dwell';
@@ -40,6 +41,7 @@ import { ContainerDetailModal } from './components/ContainerDetailModal';
 import { QuickMoveModal } from './components/QuickMoveModal';
 import { CommandPaletteModal } from './components/CommandPaletteModal';
 import { HyliumSplashScreen } from './components/HyliumSplashScreen';
+import { WindowsSetupWizardModal } from './components/WindowsSetupWizardModal';
 
 export default function App() {
   // Splash Screen State: Displays on app startup
@@ -50,6 +52,26 @@ export default function App() {
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [currentTab, setCurrentTab] = useState<HyliumNavId>('home');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Console Edition Setup Fork: 'admin' (Level 5) vs 'client' (Level 2)
+  const [consoleEdition, setConsoleEdition] = useState<ConsoleEdition>(() => {
+    try {
+      const saved = localStorage.getItem('hylium_console_edition');
+      return saved === 'client' ? 'client' : 'admin';
+    } catch {
+      return 'admin';
+    }
+  });
+  const [isSetupWizardOpen, setIsSetupWizardOpen] = useState<boolean>(false);
+
+  const handleSelectConsoleEdition = (edition: ConsoleEdition) => {
+    setConsoleEdition(edition);
+    try {
+      localStorage.setItem('hylium_console_edition', edition);
+    } catch {
+      // fallback
+    }
+  };
 
   // Depot Capacity Configured in Settings (TEU)
   const [depotCapacityTeu, setDepotCapacityTeu] = useState<number>(() => {
@@ -440,6 +462,8 @@ export default function App() {
             onToggleTheme={() => setIsDark(!isDark)}
             onOpenCommandPalette={() => setIsSearchOpen(true)}
             currentRealTime={currentRealTime}
+            consoleEdition={consoleEdition}
+            onOpenSetupWizard={() => setIsSetupWizardOpen(true)}
           />
 
           {/* Toast Notification */}
@@ -598,6 +622,16 @@ export default function App() {
         containers={containers.filter((c) => c.status === 'In Yard')}
         onSelectContainer={setSelectedContainer}
         onRequestMove={setMoveTargetContainer}
+      />
+
+      {/* Windows Native setup.exe Dual Fork Installer Wizard Modal */}
+      <WindowsSetupWizardModal
+        isOpen={isSetupWizardOpen}
+        onClose={() => setIsSetupWizardOpen(false)}
+        currentEdition={consoleEdition}
+        onSelectEdition={handleSelectConsoleEdition}
+        isDark={isDark}
+        onShowToast={showToast}
       />
 
       {/* Hylium Systems Animated Splash Screen */}
