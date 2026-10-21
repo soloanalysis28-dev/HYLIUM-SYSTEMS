@@ -1267,10 +1267,10 @@ STATUS: COMMITTED & STACKED
                       {isFullOrEmpty === 'EMPTY' ? 'EMPTY BUFFER RE-POSITIONING' : 'IMPORT LADEN BUFFER'}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span style={{ color: textMuted }}>Demurrage Free Days:</span>
-                    <span className="font-mono">5 Free Days (Formula =$R$1-H155+1)</span>
-                  </div>
+                    <div className="flex items-center justify-between">
+                      <span style={{ color: textMuted }}>Demurrage Free Days:</span>
+                      <span className="font-mono">5 Free Days</span>
+                    </div>
                 </div>
 
                 <div className="p-4 rounded-xl border space-y-1.5 font-mono text-[11px]" style={{ backgroundColor: innerBg, borderColor: cardBorder, color: textMuted }}>

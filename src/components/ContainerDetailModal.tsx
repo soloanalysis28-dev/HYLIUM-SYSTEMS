@@ -111,8 +111,8 @@ export const ContainerDetailModal: React.FC<ContainerDetailModalProps> = ({
               <span className={`text-sm font-mono font-bold ${isDemurring ? 'text-red-400' : 'text-emerald-400'}`}>
                 {realTimeDwellDays} {realTimeDwellDays === 1 ? 'day' : 'days'} {isDemurring ? `($${demurrageAmountUsd.toLocaleString()})` : '(Free Time)'}
               </span>
-              <span className="text-[10px] font-mono text-teal-400/90 block mt-0.5 truncate" title={`Report formula: ${dwellBreakdown.formulaText}`}>
-                =$R$1 - H155 + 1 ({dwellBreakdown.reportDateStr} - {dwellBreakdown.arrivalDateStr} + 1)
+              <span className="text-[10px] font-mono text-teal-400/90 block mt-0.5 truncate">
+                Active in yard since {dwellBreakdown.arrivalDateStr}
               </span>
             </div>
 
@@ -224,11 +224,11 @@ export const ContainerDetailModal: React.FC<ContainerDetailModalProps> = ({
                   <span className="font-mono text-slate-200">{container.maxPayloadKg.toLocaleString()} kg</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Turn-In / Arrival Date (H155):</span>
+                  <span>Turn-In / Arrival Date:</span>
                   <span className="font-mono text-slate-200">{new Date(container.entryTimestamp).toLocaleDateString('en-GB')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Dwell Days (=$R$1-H155+1):</span>
+                  <span>Dwell Days:</span>
                   <span className="font-mono text-emerald-400 font-bold">{realTimeDwellDays} {realTimeDwellDays === 1 ? 'day' : 'days'}</span>
                 </div>
                 <div className="flex justify-between">

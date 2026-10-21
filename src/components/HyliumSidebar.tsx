@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HyliumLogo } from './HyliumLogo';
 import { 
   CheckCircle2, 
@@ -19,6 +19,8 @@ export type HyliumNavId =
   | 'inventory' 
   | 'receive'
   | 'dispatch' 
+  | 'transactions'
+  | 'mnr'
   | 'stock-control' 
   | 'insights' 
   | 'reports' 
@@ -40,6 +42,12 @@ export const HyliumSidebar: React.FC<HyliumSidebarProps> = ({
   onToggleCollapse
 }) => {
   const [operationsExpanded, setOperationsExpanded] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (['receive', 'dispatch', 'transactions', 'mnr', 'operations'].includes(currentTab)) {
+      setOperationsExpanded(true);
+    }
+  }, [currentTab]);
 
   // Theme-aware tokens matching the Hylium mockups
   const sidebarBg = isDark ? '#101E28' : '#FFFFFF';
@@ -66,9 +74,11 @@ export const HyliumSidebar: React.FC<HyliumSidebarProps> = ({
       icon: Layers,
       hasSubmenu: true,
       subItems: [
-        { id: 'operations' as HyliumNavId, label: 'Yard Stacking' },
         { id: 'receive' as HyliumNavId, label: 'Receive (Gate In)' },
-        { id: 'stock-control' as HyliumNavId, label: 'Stock Buffer' }
+        { id: 'dispatch' as HyliumNavId, label: 'Dispatch (Gate Out)' },
+        { id: 'transactions' as HyliumNavId, label: 'Movement Ledger' },
+        { id: 'mnr' as HyliumNavId, label: 'MNR Workshop & Billing' },
+        { id: 'operations' as HyliumNavId, label: 'Yard Stacking' }
       ]
     },
     {
@@ -175,7 +185,9 @@ export const HyliumSidebar: React.FC<HyliumSidebarProps> = ({
         {/* Navigation Items List */}
         <nav className="space-y-1">
           {navItems.map((item) => {
-            const isActive = currentTab === item.id;
+            const isDirectActive = currentTab === item.id;
+            const isChildActive = Boolean(item.subItems?.some((sub) => sub.id === currentTab));
+            const isActive = isDirectActive || isChildActive;
             const Icon = item.icon;
 
             if (isCollapsed) {

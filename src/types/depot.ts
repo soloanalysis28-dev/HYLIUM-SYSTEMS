@@ -330,6 +330,115 @@ export interface LogisticsApiProvider {
   }[];
 }
 
+export interface MovementTransaction {
+  id: string; // e.g. TRX-202610-001
+  type: 'GATE_IN' | 'GATE_OUT';
+  timestamp: string;
+  monthKey: string; // e.g. "2026-10" or "OCT 2026"
+  receiptOrBookingRef: string; // e.g. OCT0001 or DO-MSK-9921
+  eirNumber: string; // e.g. EIR-IN-OCT0001
+  containerId: string;
+  formattedId: string;
+  shippingLine: ShippingLine | string;
+  isoType: IsoContainerType | string;
+  containerSize: '20ft' | '40ft' | '45ft';
+  loadStatus: 'Full' | 'Empty';
+  depotCode: string; // BAKHRE30 or ALRHRE31
+  transportMode: 'Truck' | 'Train';
+  vehiclePlate: string; // e.g. ABG-8491 or WGN-4102
+  driverName: string;
+  driverId: string;
+  transporterCompany: string;
+  tareWeightKg: number;
+  grossWeightKg?: number;
+  sealNumber?: string;
+  surveyCondition: string;
+  yardLocation?: string;
+  operator: string;
+  notes?: string;
+}
+
+export type RepairStatus = 
+  | 'Damage Reported'
+  | 'Estimate Pending Line Approval'
+  | 'Approved by Line'
+  | 'In Repair / Workshop'
+  | 'Repaired & QC Passed'
+  | 'Invoiced & Closed';
+
+export type BillingStatus = 'Unbilled' | 'Estimate Sent' | 'Invoiced' | 'Paid';
+
+export interface RepairDamageItem {
+  id: string;
+  component: string; // "Left Side Panel", "Floorboard Section", "Door Gasket", "Roof Panel", "Corner Casting", "Locking Rod"
+  damageType: string; // "Hole / Puncture", "Dent > 50mm", "Cut / Tear", "Delaminated Wood", "Bent", "Corrosion / Rust"
+  locationCode: string; // "L1", "R2", "F3", "D1", "T1"
+  repairMethod: string; // "Insert patch & weld", "Straighten & repaint", "Section replacement", "Full board replacement"
+  laborHours: number;
+  laborRatePerHour: number; // e.g. $45/hr
+  materialCost: number; // e.g. $120
+  totalCost: number; // laborHours * laborRatePerHour + materialCost
+}
+
+export interface StandardRepairTariff {
+  id: string;
+  component: string;
+  damageDescription: string;
+  standardHours: number;
+  standardMaterialUsd: number;
+  standardLaborRateUsd: number;
+  totalStandardUsd: number;
+}
+
+export interface RepairWorkOrder {
+  id: string; // e.g. MNR-2026-OCT-0104
+  containerId: string;
+  formattedId: string;
+  shippingLine: ShippingLine | string;
+  isoType: IsoContainerType | string;
+  containerSize: '20ft' | '40ft' | '45ft';
+  depotCode: string; // BAKHRE30 or ALRHRE31
+  reportedDate: string;
+  reportedBy: string;
+  status: RepairStatus;
+  priority: 'Routine' | 'Urgent / Vessel Export' | 'Safety Critical';
+  damageItems: RepairDamageItem[];
+  totalLaborHours: number;
+  totalLaborCost: number;
+  totalMaterialCost: number;
+  totalEstimateCost: number; // USD
+  lineApprovalRef?: string;
+  lineApprovedDate?: string;
+  lineContactPerson?: string;
+  agingDays: number;
+  followUpHistory: {
+    id: string;
+    timestamp: string;
+    action: string;
+    user: string;
+    notes: string;
+  }[];
+  billing: {
+    billingStatus: BillingStatus;
+    invoiceNumber?: string;
+    invoiceDate?: string;
+    dueDate?: string;
+    billTo: 'Shipping Line' | 'Cargo Owner' | 'Haulier / Transporter';
+    payerName: string;
+    taxPercent: number;
+    subtotal: number;
+    taxAmount: number;
+    totalBilledAmount: number;
+    paidDate?: string;
+    paymentRef?: string;
+    currency: string;
+  };
+  technicianAssigned?: string;
+  repairBay?: string;
+  completedDate?: string;
+  qcInspector?: string;
+}
+
 export interface OutboundWebhook {
   id: string;
   event: 'container.gate_in' | 'container.gate_out' | 'container.relocated' | 'customs.status_change' | 'reefer.temp_alarm';
@@ -339,3 +448,4 @@ export interface OutboundWebhook {
   responseMs: number;
   payloadSummary: string;
 }
+

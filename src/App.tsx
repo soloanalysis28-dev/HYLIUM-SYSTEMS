@@ -18,8 +18,11 @@ import {
   YardCrane, 
   ContainerTypeCode, 
   DEFAULT_ENABLED_CONTAINER_TYPES, 
-  CONTAINER_TYPOLOGY_SPECS 
+  CONTAINER_TYPOLOGY_SPECS,
+  MovementTransaction,
+  RepairWorkOrder
 } from './types/depot';
+import { INITIAL_MOVEMENT_TRANSACTIONS, INITIAL_REPAIR_WORK_ORDERS } from './data/operationsData';
 import { calculateRealTimeDwellDays } from './utils/dwell';
 import { HyliumSidebar, HyliumNavId } from './components/HyliumSidebar';
 import { HyliumHeader } from './components/HyliumHeader';
@@ -30,6 +33,8 @@ import { HyliumSettingsView } from './components/HyliumSettingsView';
 import { YardTrackerView } from './components/YardTrackerView';
 import { InventoryLogsView } from './components/InventoryLogsView';
 import { GateStationView } from './components/GateStationView';
+import { MovementLedgerView } from './components/MovementLedgerView';
+import { MnrWorkshopView } from './components/MnrWorkshopView';
 import { LogisticsApiGateway } from './components/LogisticsApiGateway';
 import { ContainerDetailModal } from './components/ContainerDetailModal';
 import { QuickMoveModal } from './components/QuickMoveModal';
@@ -172,6 +177,10 @@ export default function App() {
   const [providers] = useState(INITIAL_LOGISTICS_PROVIDERS);
   const [webhooks, setWebhooks] = useState<OutboundWebhook[]>(INITIAL_WEBHOOKS);
 
+  // Operations: Movement Transactions Ledger & M&R Work Orders
+  const [movementTransactions, setMovementTransactions] = useState<MovementTransaction[]>(INITIAL_MOVEMENT_TRANSACTIONS);
+  const [repairWorkOrders, setRepairWorkOrders] = useState<RepairWorkOrder[]>(INITIAL_REPAIR_WORK_ORDERS);
+
   // Compute total yard TEU and dynamic utilisation percentage
   const currentTotalTeu = useMemo(() => {
     return containers
@@ -222,6 +231,38 @@ export default function App() {
           : cr
       )
     );
+
+    // Record into Live Movement Ledger
+    const monthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const newTrx: MovementTransaction = {
+      id: `TRX-${Date.now()}`,
+      type: 'GATE_IN',
+      timestamp: new Date().toISOString(),
+      monthKey,
+      receiptOrBookingRef: newContainer.bookingReference || `OCT${Math.floor(1000 + Math.random() * 9000)}`,
+      eirNumber: `EIR-IN-${Date.now().toString().slice(-6)}`,
+      containerId: newContainer.id,
+      formattedId: newContainer.formattedId,
+      shippingLine: newContainer.shippingLine,
+      isoType: newContainer.isoType,
+      containerSize: newContainer.isoType.startsWith('20') ? '20ft' : '40ft',
+      loadStatus: (newContainer.loadType === 'Full' || newContainer.status === 'In Yard') ? 'Full' : 'Empty',
+      depotCode: newContainer.depotCode || 'BAKHRE30',
+      transportMode: 'Truck',
+      vehiclePlate: newContainer.truckPlateIn || 'ABG-8821',
+      driverName: 'Driver Recorded at Gate',
+      driverId: 'ZW-ID-VERIFIED',
+      transporterCompany: 'Commercial Carrier Haulage',
+      tareWeightKg: newContainer.tareWeightKg,
+      grossWeightKg: newContainer.grossWeightKg,
+      sealNumber: newContainer.sealNumber,
+      surveyCondition: newContainer.lastInspection.condition,
+      yardLocation: `Zone ${newContainer.location.zone} Bay ${newContainer.location.bay}`,
+      operator: 'Depot Gate Officer',
+      notes: 'Live gate-in receipt processed.'
+    };
+    setMovementTransactions((prev) => [newTrx, ...prev]);
+
     showToast(`Container ${newContainer.formattedId} registered via Gate In.`);
   };
 
@@ -231,6 +272,8 @@ export default function App() {
     releaseDetails?: { dispatchReference: string; driverName: string; driverId: string }
   ) => {
     const exitTimestamp = new Date().toISOString();
+    const target = containers.find((c) => c.id === containerId);
+
     setContainers((prev) =>
       prev.map((c) =>
         c.id === containerId
@@ -255,6 +298,40 @@ export default function App() {
           : c
       )
     );
+
+    // Record into Live Movement Ledger
+    if (target) {
+      const monthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+      const newOutTrx: MovementTransaction = {
+        id: `TRX-${Date.now()}`,
+        type: 'GATE_OUT',
+        timestamp: exitTimestamp,
+        monthKey,
+        receiptOrBookingRef: releaseDetails?.dispatchReference || 'DO-RELEASE',
+        eirNumber: `EIR-OUT-${Date.now().toString().slice(-6)}`,
+        containerId: target.id,
+        formattedId: target.formattedId,
+        shippingLine: target.shippingLine,
+        isoType: target.isoType,
+        containerSize: target.isoType.startsWith('20') ? '20ft' : '40ft',
+        loadStatus: 'Full',
+        depotCode: target.depotCode || 'BAKHRE30',
+        transportMode: 'Truck',
+        vehiclePlate: truckOut,
+        driverName: releaseDetails?.driverName || 'Dispatch Driver',
+        driverId: releaseDetails?.driverId || 'ZW-ID-DISPATCH',
+        transporterCompany: 'Swift Logistics Southern Africa',
+        tareWeightKg: target.tareWeightKg,
+        grossWeightKg: target.grossWeightKg,
+        sealNumber: target.sealNumber,
+        surveyCondition: 'Outbound Gate Release Verified',
+        yardLocation: `Zone ${target.location.zone} Bay ${target.location.bay}`,
+        operator: 'Outbound Gate Officer',
+        notes: `Container release reference: ${releaseDetails?.dispatchReference || 'N/A'}`
+      };
+      setMovementTransactions((prev) => [newOutTrx, ...prev]);
+    }
+
     showToast(`Container ${containerId} successfully dispatched and gated out.`);
   };
 
@@ -312,9 +389,13 @@ export default function App() {
       case 'inventory':
         return { title: 'Inventory' };
       case 'receive':
-        return { title: 'Receive & Gate In' };
+        return { title: 'Receive (Gate In)' };
       case 'dispatch':
-        return { title: 'Dispatch & Gate Out' };
+        return { title: 'Dispatch (Gate Out)' };
+      case 'transactions':
+        return { title: 'Movement Ledger & Audit' };
+      case 'mnr':
+        return { title: 'MNR Workshop & Repair Billing' };
       case 'stock-control':
         return { title: 'Stock Control' };
       case 'insights':
@@ -429,6 +510,25 @@ export default function App() {
               onGateInSuccess={handleGateInSuccess}
               onGateOutSuccess={handleGateOutSuccess}
               onNavigateToInventory={() => setCurrentTab('inventory')}
+            />
+          )}
+
+          {currentTab === 'transactions' && (
+            <MovementLedgerView
+              transactions={movementTransactions}
+              isDark={isDark}
+              onNavigateToReceive={() => setCurrentTab('receive')}
+              onNavigateToDispatch={() => setCurrentTab('dispatch')}
+            />
+          )}
+
+          {currentTab === 'mnr' && (
+            <MnrWorkshopView
+              workOrders={repairWorkOrders}
+              containers={containers}
+              isDark={isDark}
+              onUpdateWorkOrders={setRepairWorkOrders}
+              onShowToast={showToast}
             />
           )}
 

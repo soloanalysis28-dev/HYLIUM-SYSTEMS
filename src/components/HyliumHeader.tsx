@@ -65,7 +65,7 @@ export const HyliumHeader: React.FC<HyliumHeaderProps> = ({
               borderColor: surfaceBorder,
               color: textPrimary
             }}
-            title="Live terminal reference date ($R$1) actively computing container dwell via formula =$R$1-H155+1"
+            title="Live terminal clock actively computing real-time container dwell"
           >
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-[11px] font-bold text-emerald-500 uppercase tracking-wider">LIVE</span>

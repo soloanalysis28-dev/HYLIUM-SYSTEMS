@@ -281,7 +281,7 @@ export const InventoryLogsView: React.FC<InventoryLogsViewProps> = ({
                 >
                   <div className="flex items-center gap-1.5" style={{ color: sortBy === 'dwell' ? (isDark ? '#23cca8' : '#108e7d') : textMuted }}>
                     <span className={`font-bold ${sortBy === 'dwell' ? 'underline decoration-dotted underline-offset-4' : 'group-hover:text-teal-400'}`}>
-                      Dwell (=$R$1-H155+1)
+                      Dwell
                     </span>
                     {sortBy === 'dwell' ? (
                       sortDirection === 'desc' ? <ArrowDown className="w-3.5 h-3.5" /> : <ArrowUp className="w-3.5 h-3.5" />
